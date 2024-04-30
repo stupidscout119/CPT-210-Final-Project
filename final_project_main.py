@@ -160,7 +160,8 @@ def loop():
 # RETURN:
 #   none
 # -----------------------------------------------------------------------------
-    # use BCM GPIO numbering scheme
+def setup_gpio():   
+     # use BCM GPIO numbering scheme
     GPIO.setmode(GPIO.BCM)
     
     # Set Pin 4 to OUTPUT mode
