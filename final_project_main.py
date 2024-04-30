@@ -13,10 +13,12 @@
 #*****************************************************************************
 # Imports to be used in program
 #*****************************************************************************
-# allows the designer to use functions around the Pi's GPIO pins.
 import RPi.GPIO as GPIO
-
 import time
+import LCD1602
+from bottle import route, run, template
+import Tkinter as TK
+
 
 #*****************************************************************************
 # Constants to be used in program
@@ -109,6 +111,7 @@ def main ():
 
   try:
     setup_gpio()
+    create_gui(servo_pwm)
     
     #while (input to shut car down is entered):
        # loop()
@@ -302,7 +305,30 @@ def turn_right():
 # RETURN:
 #   none
 # -----------------------------------------------------------------------------
-def path_direction_drive():
+def forward_drive_direction():
+   
+
+
+# -----------------------------------------------------------------------------
+# DESCRIPTION
+#   Ensures that certain functions, specifically the GPIO pins, are turned off.
+#
+# INPUT PARAMETERS:
+#   none
+#
+# OUTPUT PARAMETERS:
+#   none
+#
+# RETURN:
+#   none
+# -----------------------------------------------------------------------------
+def determine_turn_direction(gpio_pin, logic_level):
+   turn_status = False
+
+   if(GPIO.input(gpio_pin) == logic_level):
+      turn_status = True
+
+    return turn_status
 
 
 
