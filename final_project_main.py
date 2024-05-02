@@ -26,6 +26,9 @@ import Tkinter as TK
 
 # cm
 OBST_MAX_DIST = 11.43
+FORWARD       = 1
+BACKWARDS     = -1
+STOP          = 0
 
 TRIG_GPIO    = 23
 ECHO_GPIO    = 24
@@ -97,8 +100,11 @@ START_INDEX = 0
 #---------------------------------------------------------------------
 # Global variables to be used
 #---------------------------------------------------------------------
-g_alarm_on_time  = ALARM_DEACTIVATED
-g_alarm_off_time = ALARM_DEACTIVATED
+# Debugging features flags
+g_adaptive_obst_driving = False
+g_adaptive_path_driving = False
+g_degree_turn_test      = False
+
 
 #---------------------------------------------------------------------
 # This is the main function for the program
@@ -110,7 +116,7 @@ def main ():
   # N/A
 
   try:
-    setup_gpio()
+    left_motor_pwm, right_motor_pwm = setup_gpio()
     create_gui(servo_pwm)
     
     #while (input to shut car down is entered):
@@ -140,8 +146,31 @@ def main ():
 #   N/A
 # -----------------------------------------------------------------------------
 def loop():
-   # Important functions for car
+    direction_state = FORWARD
+    
+    if(g_adaptive_obst_driving):
+        direction_state = determine_distance(gpio_pin, on_time, off_time, repeat_alarm)
 
+    left_motor_pwm, right_motor_pwm = forward_drive_direction(direction_state, left_motor_pwm, right_motor_pwm)
+    
+    if(g_adaptive_path_driving):
+        turn_left_flag = determine_turn_direction(gpio_pin, GPIO.LOW)
+        turn_right_flag = determine_turn_direction(gpio_pin, GPIO.LOW)
+        if(turn_left_flag != turn_right_flag)
+            if(turn_left_flag):
+                left_motor_pwm, right_motor_pwm = turn_left(left_motor_pwm, right_motor_pwm)
+
+            if(turn_right_flag):
+                left_motor_pwm, right_motor_pwm = turn_right(left_motor_pwm, right_motor_pwm)
+    
+    if(g_degree_turn_test):
+        # Input that polls for input without stoping program and stores it in "degree_input"
+        if(degree_input != 0):
+            left_motor_pwm, right_motor_pwm = forward_drive_direction(STOP, left_motor_pwm, right_motor_pwm)
+            turn_by_degree(degree_input, left_motor_pwm, right_motor_pwm)
+    
+       
+       
    #time.sleep(amount of time needed to let the car drive)
 
 
@@ -164,13 +193,14 @@ def setup_gpio():
      # use BCM GPIO numbering scheme
     GPIO.setmode(GPIO.BCM)
     
-    # Set Pin 4 to OUTPUT mode
-    GPIO.setup(ALARM_GPIO, GPIO.OUT)
-    # Set Pin 23 to OUTPUT mode
+    # Set Pin ? to OUTPUT mode
     GPIO.setup(TRIG_GPIO, GPIO.OUT)
-    # Set Pin 24 to INPUT mode
+    # Set Pin ? to INPUT mode
     GPIO.setup(ECHO_GPIO, GPIO.IN) 
-   # Other GPIO pins/PWMs are set up
+
+    # Create PWM Objects
+    
+   return left_motor_pwm, right_motor_pwm
      
 
 
@@ -249,13 +279,19 @@ def measure_return_echo(gpio_pin, logic_level, time_out):
 # RETURN:
 #    distance - The distance between the sensor and a surface
 # -----------------------------------------------------------------------------
-def determine_distance(gpio_pin, on_time, off_time, repeat_alarm):
-    
+def determine_distance(gpio_pin):
+    direction_state = FORWARD
+
     send_trigger_pulse()
     distance = measure_return_echo(ECHO_GPIO, GPIO.HIGH, TIME_OUT)
     
-    while(distance <= OBST_MAX_DIST):
-        # Reverse while staying on line
+    if(distance < OBST_MAX_DIST):
+        direction_state = BACKWARDS
+
+    if(distance == OBST_MAX_DIST):
+        direction_state = STOP
+
+    return direction_state
 
 
 
@@ -312,7 +348,7 @@ def forward_drive_direction():
 
 # -----------------------------------------------------------------------------
 # DESCRIPTION
-#   Ensures that certain functions, specifically the GPIO pins, are turned off.
+#   
 #
 # INPUT PARAMETERS:
 #   none
@@ -330,6 +366,32 @@ def determine_turn_direction(gpio_pin, logic_level):
       turn_status = True
 
     return turn_status
+
+
+
+# -----------------------------------------------------------------------------
+# DESCRIPTION
+#   
+#
+# INPUT PARAMETERS:
+#   none
+#
+# OUTPUT PARAMETERS:
+#   none
+#
+# RETURN:
+#   none
+# -----------------------------------------------------------------------------
+def turn_by_degree(degree_input, left_motor_pwm, right_motor_pwm):
+    while(#checks if the car has turned to the specified angle):
+        if(degree_input > 0):
+            # Turns the car to the left to the specified angle
+        else:
+            # Turns the car to the right to the specified angle
+
+        # Insert appropriate delay for car to turn
+
+    return left_motor_pwm, right_motor_pwm
 
 
 
