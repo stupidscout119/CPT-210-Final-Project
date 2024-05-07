@@ -25,13 +25,22 @@ import Tkinter as TK
 #*****************************************************************************
 
 # cm
-OBST_MAX_DIST = 11.43
-FORWARD       = 1
-BACKWARDS     = -1
-STOP          = 0
+OBST_MAX_DIST           = 11.43
+FORWARD                 = 1
+BACKWARDS               = -1
+STOP                    = 0
+LEFT_WHEEL_ENABLE_GPIO  = 22
+RIGHT_WHEEL_ENABLE_GPIO = 25
+LEFT_WHEEL_1_GPIO       = 27
+LEFT_WHEEL_2_GPIO       = 17
+RIGHT_WHEEL_1_GPIO      = 24
+RIGHT_WHEEL_2_GPIO      = 23
+LEFT_OBST_GPIO          = ?
+RIGHT_OBST_GPIO         = ?
+LED_GPIO                = ?
 
-TRIG_GPIO    = 23
-ECHO_GPIO    = 24
+TRIG_GPIO    = ?
+ECHO_GPIO    = ?
 MAX_DISTANCE = 220
 TIME_OUT     = MAX_DISTANCE * 60
 NANO_SEC_10    = 0.000001
@@ -45,7 +54,7 @@ START_DUTY_CYCLE = 0
 STOP_DUTY_CYCLE  = 100
 DUTY_CYCLE_DELAY = 0.01
 TURNAROUND_TIME  = 0.5
-PWM_FREQUENCY    = 50
+PWM_FREQUENCY    = 1000
 
 # Constants for GUI Functions
 WINDOW_SIZE     = "400x175"
@@ -116,17 +125,17 @@ def main ():
   # N/A
 
   try:
-    left_motor_pwm, right_motor_pwm = setup_gpio()
-    create_gui(servo_pwm)
+    left_enable_pwm, right_enable_pwm = setup_gpio()
+    create_gui(left_enable_pwm, right_enable_pwm)
     
-    #while (input to shut car down is entered):
-       # loop()
+    while (input to shut car down is entered):
+       loop(left_enable_pwm, right_enable_pwm)
 
   except Exception as Error:
     print(f"Unexpected error detected: {Error}")
 
   finally:
-    destroy()
+    destroy(left_enable_pwm, right_enable_pwm)
     
 
 
@@ -151,23 +160,23 @@ def loop():
     if(g_adaptive_obst_driving):
         direction_state = determine_distance(gpio_pin, on_time, off_time, repeat_alarm)
 
-    left_motor_pwm, right_motor_pwm = forward_drive_direction(direction_state, left_motor_pwm, right_motor_pwm)
+    left_enable_pwm, right_enable_pwm = forward_drive_direction(direction_state, left_enable_pwm, right_enable_pwm)
     
     if(g_adaptive_path_driving):
         turn_left_flag = determine_turn_direction(gpio_pin, GPIO.LOW)
         turn_right_flag = determine_turn_direction(gpio_pin, GPIO.LOW)
         if(turn_left_flag != turn_right_flag)
             if(turn_left_flag):
-                left_motor_pwm, right_motor_pwm = turn_left(left_motor_pwm, right_motor_pwm)
+                turn_left()
 
             if(turn_right_flag):
-                left_motor_pwm, right_motor_pwm = turn_right(left_motor_pwm, right_motor_pwm)
+                turn_right()
     
     if(g_degree_turn_test):
         # Input that polls for input without stoping program and stores it in "degree_input"
         if(degree_input != 0):
-            left_motor_pwm, right_motor_pwm = forward_drive_direction(STOP, left_motor_pwm, right_motor_pwm)
-            turn_by_degree(degree_input, left_motor_pwm, right_motor_pwm)
+            left_enable_pwm, right_enable_pwm = forward_drive_direction(STOP, left_enable_pwm, right_enable_pwm)
+            turn_by_degree(degree_input, left_enable_pwm, right_enable_pwm)
     
        
        
@@ -196,11 +205,37 @@ def setup_gpio():
     # Set Pin ? to OUTPUT mode
     GPIO.setup(TRIG_GPIO, GPIO.OUT)
     # Set Pin ? to INPUT mode
-    GPIO.setup(ECHO_GPIO, GPIO.IN) 
+    GPIO.setup(ECHO_GPIO, GPIO.IN)
+
+RIGHT_WHEEL_2_GPIO      = 23
+
+    # Set Pin 22 to OUTPUT mode
+    GPIO.setup(LEFT_WHEEL_ENABLE_GPIO, GPIO.OUT)
+    # Set Pin 27 to OUTPUT mode
+    GPIO.setup(LEFT_WHEEL_1_GPIO, GPIO.OUT)
+    # Set Pin 17 to OUTPUT mode
+    GPIO.setup(LEFT_WHEEL_2_GPIO, GPIO.OUT)
+
+    # Set Pin 25 to OUTPUT mode
+    GPIO.setup(RIGHT_WHEEL_ENABLE_GPIO, GPIO.OUT)
+    # Set Pin 24 to OUTPUT mode
+    GPIO.setup(RIGHT_WHEEL_1_GPIO, GPIO.OUT) 
+    # Set Pin 23 to OUTPUT mode
+    GPIO.setup(RIGHT_WHEEL_2_GPIO, GPIO.OUT) 
+
+    # Set Pin ? to INPUT mode
+    GPIO.setup(LEFT_OBST_GPIO, GPIO.IN)
+    # Set Pin ? to INPUT mode
+    GPIO.setup(RIGHT_OBST_GPIO, GPIO.IN)
+
+    # Set Pin ? to OUTPUT mode
+    GPIO.setup(LED_GPIO, GPIO.OUT) 
 
     # Create PWM Objects
-    
-   return left_motor_pwm, right_motor_pwm
+    left_enable_pwm = GPIO.PWM (LEFT_WHEEL_ENABLE_GPIO, PWM_FREQUENCY)
+    right_enable_pwm = GPIO.PWM (RIGHT_WHEEL_ENABLE_GPIO, PWM_FREQUENCY)
+
+   return left_enable_pwm, right_enable_pwm
      
 
 
@@ -382,7 +417,7 @@ def determine_turn_direction(gpio_pin, logic_level):
 # RETURN:
 #   none
 # -----------------------------------------------------------------------------
-def turn_by_degree(degree_input, left_motor_pwm, right_motor_pwm):
+def turn_by_degree(degree_input, left_enable_pwm, right_enable_pwm):
     while(#checks if the car has turned to the specified angle):
         if(degree_input > 0):
             # Turns the car to the left to the specified angle
@@ -391,7 +426,7 @@ def turn_by_degree(degree_input, left_motor_pwm, right_motor_pwm):
 
         # Insert appropriate delay for car to turn
 
-    return left_motor_pwm, right_motor_pwm
+    return left_enable_pwm, right_enable_pwm
 
 
 
@@ -408,7 +443,9 @@ def turn_by_degree(degree_input, left_motor_pwm, right_motor_pwm):
 # RETURN:
 #   none
 # -----------------------------------------------------------------------------
-def destroy():
+def destroy(left_enable_pwm, right_enable_pwm):
+    left_enable_pwm.stop()
+    right_enable_pwm.stop()
     GPIO.cleanup()
     # Other functions are shut down
 
