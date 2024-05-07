@@ -38,6 +38,8 @@ RIGHT_WHEEL_2_GPIO      = 23
 LEFT_OBST_GPIO          = ?
 RIGHT_OBST_GPIO         = ?
 LED_GPIO                = ?
+FULL_SPEED              = 100
+NO_SPEED                = 0
 
 TRIG_GPIO    = ?
 ECHO_GPIO    = ?
@@ -126,6 +128,11 @@ def main ():
 
   try:
     left_enable_pwm, right_enable_pwm = setup_gpio()
+
+    # Starts the PWM of both h-bridge enables
+    left_enable_pwm.start(START_DUTY_CYCLE)
+    right_enable_pwm.start(START_DUTY_CYCLE)
+
     create_gui(left_enable_pwm, right_enable_pwm)
     
     while (input to shut car down is entered):
@@ -162,15 +169,15 @@ def loop():
 
     left_enable_pwm, right_enable_pwm = forward_drive_direction(direction_state, left_enable_pwm, right_enable_pwm)
     
-    if(g_adaptive_path_driving):
+    if(g_adaptive_path_driving and direction_state != STOP):
         turn_left_flag = determine_turn_direction(gpio_pin, GPIO.LOW)
         turn_right_flag = determine_turn_direction(gpio_pin, GPIO.LOW)
         if(turn_left_flag != turn_right_flag)
             if(turn_left_flag):
-                turn_left()
+                left_enable_pwm, right_enable_pwm = turn_left(direction_state, left_enable_pwm, right_enable_pwm)
 
             if(turn_right_flag):
-                turn_right()
+                left_enable_pwm, right_enable_pwm = turn_right(direction_state, left_enable_pwm, right_enable_pwm)
     
     if(g_degree_turn_test):
         # Input that polls for input without stoping program and stores it in "degree_input"
@@ -206,8 +213,6 @@ def setup_gpio():
     GPIO.setup(TRIG_GPIO, GPIO.OUT)
     # Set Pin ? to INPUT mode
     GPIO.setup(ECHO_GPIO, GPIO.IN)
-
-RIGHT_WHEEL_2_GPIO      = 23
 
     # Set Pin 22 to OUTPUT mode
     GPIO.setup(LEFT_WHEEL_ENABLE_GPIO, GPIO.OUT)
@@ -332,7 +337,7 @@ def determine_distance(gpio_pin):
 
 # -----------------------------------------------------------------------------
 # DESCRIPTION
-#   Ensures that certain functions, specifically the GPIO pins, are turned off.
+#   
 #
 # INPUT PARAMETERS:
 #   none
@@ -343,13 +348,36 @@ def determine_distance(gpio_pin):
 # RETURN:
 #   none
 # -----------------------------------------------------------------------------
-def turn_left():
+def turn_left(direction_state, left_enable_pwm, right_enable_pwm):
+    if(direction_state == FORWARD):
+        GPIO.output(LEFT_WHEEL_1_GPIO,GPIO.LOW) 
+        GPIO.output(LEFT_WHEEL_2_GPIO,GPIO.LOW) 
+
+        GPIO.output(RIGHT_WHEEL_1_GPIO,GPIO.HIGH)
+        GPIO.output(RIGHT_WHEEL_2_GPIO,GPIO.LOW)
+
+        right_enable_pwm.ChangeDutyCycle(FULL_SPEED)
+        left_enable_pwm.ChangeDutyCycle(NO_SPEED)
+    
+    else:
+        GPIO.output(LEFT_WHEEL_1_GPIO,GPIO.LOW) 
+        GPIO.output(LEFT_WHEEL_2_GPIO,GPIO.HIGH) 
+
+        GPIO.output(RIGHT_WHEEL_1_GPIO,GPIO.LOW)
+        GPIO.output(RIGHT_WHEEL_2_GPIO,GPIO.LOW)
+
+        right_enable_pwm.ChangeDutyCycle(NO_SPEED)
+        left_enable_pwm.ChangeDutyCycle(FULL_SPEED)
+    
+    return left_enable_pwm, right_enable_pwm
+
+    
    
 
 
 # -----------------------------------------------------------------------------
 # DESCRIPTION
-#   Ensures that certain functions, specifically the GPIO pins, are turned off.
+#   
 #
 # INPUT PARAMETERS:
 #   none
@@ -360,13 +388,30 @@ def turn_left():
 # RETURN:
 #   none
 # -----------------------------------------------------------------------------
-def turn_right():
-   
+def turn_right(direction_state, left_enable_pwm, right_enable_pwm):
+   if(direction_state == FORWARD):
+        GPIO.output(LEFT_WHEEL_1_GPIO,GPIO.HIGH) 
+        GPIO.output(LEFT_WHEEL_2_GPIO,GPIO.LOW) 
+
+        GPIO.output(RIGHT_WHEEL_1_GPIO,GPIO.LOW)
+        GPIO.output(RIGHT_WHEEL_2_GPIO,GPIO.LOW)
+
+        left_enable_pwm.
+        right_enable_pwm
+    
+    else:
+        GPIO.output(LEFT_WHEEL_1_GPIO,GPIO.LOW) 
+        GPIO.output(LEFT_WHEEL_2_GPIO,GPIO.LOW) 
+
+        GPIO.output(RIGHT_WHEEL_1_GPIO,GPIO.LOW)
+        GPIO.output(RIGHT_WHEEL_2_GPIO,GPIO.HIGH)
+
+    return left_enable_pwm, right_enable_pwm
 
 
 # -----------------------------------------------------------------------------
 # DESCRIPTION
-#   Ensures that certain functions, specifically the GPIO pins, are turned off.
+#   
 #
 # INPUT PARAMETERS:
 #   none
