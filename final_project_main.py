@@ -37,7 +37,7 @@ RIGHT_WHEEL_1_GPIO      = 24
 RIGHT_WHEEL_2_GPIO      = 23
 LEFT_OBST_GPIO          = ?
 RIGHT_OBST_GPIO         = ?
-LED_GPIO                = ?
+#LED_GPIO                = ?
 FULL_SPEED              = 100
 NO_SPEED                = 0
 
@@ -114,7 +114,6 @@ START_INDEX = 0
 # Debugging features flags
 g_adaptive_obst_driving = False
 g_adaptive_path_driving = False
-g_degree_turn_test      = False
 
 
 #---------------------------------------------------------------------
@@ -179,12 +178,6 @@ def loop():
             if(turn_right_flag):
                 left_enable_pwm, right_enable_pwm = turn_right(direction_state, left_enable_pwm, right_enable_pwm)
     
-    if(g_degree_turn_test):
-        # Input that polls for input without stoping program and stores it in "degree_input"
-        if(degree_input != 0):
-            left_enable_pwm, right_enable_pwm = forward_drive_direction(STOP, left_enable_pwm, right_enable_pwm)
-            turn_by_degree(degree_input, left_enable_pwm, right_enable_pwm)
-    
        
        
    #time.sleep(amount of time needed to let the car drive)
@@ -193,8 +186,60 @@ def loop():
 
 # -----------------------------------------------------------------------------
 # DESCRIPTION
-#   Sets up GPIO functionality for the program, speciffically for pins 4, 23, & 
-#   24.
+#   
+#
+# INPUT PARAMETERS:
+#   
+#
+# OUTPUT PARAMETERS:
+#   
+#
+# RETURN:
+#   
+# -----------------------------------------------------------------------------
+def create_gui(servo_pwm):
+    global gui_main_window
+
+    # Creates the main GUI window
+    gui_main_window = TK.Tk()
+    #Creates the main window's title
+    gui_main_window.title("CPT-210: Final Project V1")
+    
+    # Creates a frame that holds the instructions on how to use the GUI
+    desc_frame = TK.Frame(gui_main_window)
+    # Packs the frame inside the main window
+    desc_frame.pack(side=TK.TOP)
+    # The directions are written into the frame
+    TK.Label(desc_frame, text="DIRECTIONS:").grid(row=0, column=0)
+    TK.Label(desc_frame, text="Move sliders around to adjust the speed of the car").grid(row=0, column=1)
+    TK.Label(desc_frame, text="-100 = full speed backwards; 100 = full speed forward").grid(row=2, column=1)
+    
+    # Creates a frame that will hold the controls in the main window
+    ctrl_frame = TK.Frame(gui_main_window)
+    ctrl_frame.pack(side=TK.BOTTOM)
+    
+    # Creates labels for the slider controls
+    # Add labels for the frame
+    TK.Label(ctrl_frame, text="Angle").grid(row=0, column=0)
+
+    # Pack the new frame into the window at the bottom
+    ctrl_frame.pack(side=TK.BOTTOM)
+    
+    #Creates handles to PWM as part of the main window object
+    gui_main_window.servo_pwm = servo_pwm
+    
+    # A slider object for pi_pwm1 (BLU LED segment PWM) is created and properly placed
+    scaleAngle = TK.Scale(ctrl_frame, from_=MIN_ANGLE, to=MAX_ANGLE, orient=TK.HORIZONTAL, command=update_servo_pwm)
+    scaleAngle.grid(row=0, column=1)
+
+    # Sets the window to the proper position.
+    gui_main_window.geometry(WINDOW_GEOMETRY)
+
+
+
+# -----------------------------------------------------------------------------
+# DESCRIPTION
+#   Sets up GPIO functionality for the program, speciffically for pins 
 #
 # INPUT PARAMETERS:
 #   none
@@ -396,8 +441,8 @@ def turn_right(direction_state, left_enable_pwm, right_enable_pwm):
         GPIO.output(RIGHT_WHEEL_1_GPIO,GPIO.LOW)
         GPIO.output(RIGHT_WHEEL_2_GPIO,GPIO.LOW)
 
-        left_enable_pwm.
-        right_enable_pwm
+        right_enable_pwm.ChangeDutyCycle(NO_SPEED)
+        left_enable_pwm.ChangeDutyCycle(FULL_SPEED)
     
     else:
         GPIO.output(LEFT_WHEEL_1_GPIO,GPIO.LOW) 
@@ -405,6 +450,9 @@ def turn_right(direction_state, left_enable_pwm, right_enable_pwm):
 
         GPIO.output(RIGHT_WHEEL_1_GPIO,GPIO.LOW)
         GPIO.output(RIGHT_WHEEL_2_GPIO,GPIO.HIGH)
+
+        right_enable_pwm.ChangeDutyCycle(FULL_SPEED)
+        left_enable_pwm.ChangeDutyCycle(NO_SPEED)
 
     return left_enable_pwm, right_enable_pwm
 
@@ -422,7 +470,38 @@ def turn_right(direction_state, left_enable_pwm, right_enable_pwm):
 # RETURN:
 #   none
 # -----------------------------------------------------------------------------
-def forward_drive_direction():
+def forward_drive_direction(direction_state, left_enable_pwm, right_enable_pwm):
+   if(direction_state == FORWARD):
+        GPIO.output(LEFT_WHEEL_1_GPIO,GPIO.HIGH) 
+        GPIO.output(LEFT_WHEEL_2_GPIO,GPIO.LOW) 
+
+        GPIO.output(RIGHT_WHEEL_1_GPIO,GPIO.HIGH)
+        GPIO.output(RIGHT_WHEEL_2_GPIO,GPIO.LOW)
+
+        right_enable_pwm.ChangeDutyCycle(FULL_SPEED)
+        left_enable_pwm.ChangeDutyCycle(FULL_SPEED)
+    
+    elif(direction_state == BACKWARDS):
+        GPIO.output(LEFT_WHEEL_1_GPIO,GPIO.LOW) 
+        GPIO.output(LEFT_WHEEL_2_GPIO,GPIO.HIGH) 
+
+        GPIO.output(RIGHT_WHEEL_1_GPIO,GPIO.LOW)
+        GPIO.output(RIGHT_WHEEL_2_GPIO,GPIO.HIGH)
+
+        right_enable_pwm.ChangeDutyCycle(FULL_SPEED)
+        left_enable_pwm.ChangeDutyCycle(FULL_SPEED)
+
+    else:
+        GPIO.output(LEFT_WHEEL_1_GPIO,GPIO.LOW) 
+        GPIO.output(LEFT_WHEEL_2_GPIO,GPIO.LOW) 
+
+        GPIO.output(RIGHT_WHEEL_1_GPIO,GPIO.LOW)
+        GPIO.output(RIGHT_WHEEL_2_GPIO,GPIO.LOW)
+
+        right_enable_pwm.ChangeDutyCycle(NO_SPEED)
+        left_enable_pwm.ChangeDutyCycle(NO_SPEED)
+
+    return left_enable_pwm, right_enable_pwm 
    
 
 
@@ -446,32 +525,6 @@ def determine_turn_direction(gpio_pin, logic_level):
       turn_status = True
 
     return turn_status
-
-
-
-# -----------------------------------------------------------------------------
-# DESCRIPTION
-#   
-#
-# INPUT PARAMETERS:
-#   none
-#
-# OUTPUT PARAMETERS:
-#   none
-#
-# RETURN:
-#   none
-# -----------------------------------------------------------------------------
-def turn_by_degree(degree_input, left_enable_pwm, right_enable_pwm):
-    while(#checks if the car has turned to the specified angle):
-        if(degree_input > 0):
-            # Turns the car to the left to the specified angle
-        else:
-            # Turns the car to the right to the specified angle
-
-        # Insert appropriate delay for car to turn
-
-    return left_enable_pwm, right_enable_pwm
 
 
 
