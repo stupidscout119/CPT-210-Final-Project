@@ -12,9 +12,11 @@ def setup_gpio():
     GPIO.setup(RIGHT_GPIO_IR, GPIO.IN)
 
 def main():
-    if GPIO.input(LEFT_GPIO_IR) == GPIO.HIGH:
-        print('left pin is high')
-    elif GPIO.input(RIGHT_GPIO_IR) == GPIO.HIGH:
-        print('Right pin is high')
+    setup_gpio()
+    while (True):
+        if GPIO.input(LEFT_GPIO_IR) == GPIO.HIGH:
+            print('left pin is high')
+        elif GPIO.input(RIGHT_GPIO_IR) == GPIO.HIGH:
+            print('Right pin is high')
 
 main()
