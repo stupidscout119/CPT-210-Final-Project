@@ -35,11 +35,13 @@ LEFT_WHEEL_1_GPIO       = 27
 LEFT_WHEEL_2_GPIO       = 17
 RIGHT_WHEEL_1_GPIO      = 24
 RIGHT_WHEEL_2_GPIO      = 23
-LEFT_OBST_GPIO          = ?
-RIGHT_OBST_GPIO         = ?
+LEFT_OBST_GPIO          = 5
+RIGHT_OBST_GPIO         = 6
 #LED_GPIO                = ?
 FULL_SPEED              = 100
 NO_SPEED                = 0
+MIN_SPEED               = -100
+MAX_SPEED               = 100
 
 TRIG_GPIO    = ?
 ECHO_GPIO    = ?
@@ -161,6 +163,7 @@ def main ():
 #   N/A
 # -----------------------------------------------------------------------------
 def loop():
+    gui_main_window.mainloop()
     direction_state = FORWARD
     
     if(g_adaptive_obst_driving):
@@ -169,9 +172,9 @@ def loop():
     left_enable_pwm, right_enable_pwm = forward_drive_direction(direction_state, left_enable_pwm, right_enable_pwm)
     
     if(g_adaptive_path_driving and direction_state != STOP):
-        turn_left_flag = determine_turn_direction(gpio_pin, GPIO.LOW)
-        turn_right_flag = determine_turn_direction(gpio_pin, GPIO.LOW)
-        if(turn_left_flag != turn_right_flag)
+        turn_left_flag = determine_turn_direction(LEFT_OBST_GPIO, GPIO.LOW)
+        turn_right_flag = determine_turn_direction(RIGHT_OBST_GPIO, GPIO.LOW)
+        if(turn_left_flag != turn_right_flag):
             if(turn_left_flag):
                 left_enable_pwm, right_enable_pwm = turn_left(direction_state, left_enable_pwm, right_enable_pwm)
 
@@ -197,7 +200,7 @@ def loop():
 # RETURN:
 #   
 # -----------------------------------------------------------------------------
-def create_gui(servo_pwm):
+def create_gui(left_enable_pwm, right_enable_pwm):
     global gui_main_window
 
     # Creates the main GUI window
@@ -211,29 +214,56 @@ def create_gui(servo_pwm):
     desc_frame.pack(side=TK.TOP)
     # The directions are written into the frame
     TK.Label(desc_frame, text="DIRECTIONS:").grid(row=0, column=0)
-    TK.Label(desc_frame, text="Move sliders around to adjust the speed of the car").grid(row=0, column=1)
+    TK.Label(desc_frame, text="Move sliders around to adjust the respective motor speeds of the car").grid(row=0, column=1)
     TK.Label(desc_frame, text="-100 = full speed backwards; 100 = full speed forward").grid(row=2, column=1)
     
     # Creates a frame that will hold the controls in the main window
     ctrl_frame = TK.Frame(gui_main_window)
     ctrl_frame.pack(side=TK.BOTTOM)
+
     
     # Creates labels for the slider controls
     # Add labels for the frame
-    TK.Label(ctrl_frame, text="Angle").grid(row=0, column=0)
+    TK.Label(ctrl_frame, text="Left Motor Speed").grid(row=0, column=0)
+    TK.Label(ctrl_frame, text="Right Motor Speed").grid(row=1, column=0)
 
     # Pack the new frame into the window at the bottom
     ctrl_frame.pack(side=TK.BOTTOM)
     
-    #Creates handles to PWM as part of the main window object
-    gui_main_window.servo_pwm = servo_pwm
+    #Creates handles to PWMs as part of the main window object
+    gui_main_window.left_enable_pwm = left_enable_pwm
+    gui_main_window.right_enable_pwm = right_enable_pwm
     
     # A slider object for pi_pwm1 (BLU LED segment PWM) is created and properly placed
-    scaleAngle = TK.Scale(ctrl_frame, from_=MIN_ANGLE, to=MAX_ANGLE, orient=TK.HORIZONTAL, command=update_servo_pwm)
+    scaleAngle = TK.Scale(ctrl_frame, from_=MIN_SPEED, to=MAX_SPEED, orient=TK.HORIZONTAL, command=update_left_enable_pwm)
+    scaleAngle.grid(row=0, column=1)
+    scaleAngle = TK.Scale(ctrl_frame, from_=MIN_SPEED, to=MAX_SPEED, orient=TK.HORIZONTAL, command=update_right_enable_pwm)
     scaleAngle.grid(row=0, column=1)
 
     # Sets the window to the proper position.
     gui_main_window.geometry(WINDOW_GEOMETRY)
+
+
+
+# -----------------------------------------------------------------------------
+# DESCRIPTION
+#   
+#
+# INPUT PARAMETERS:
+#   
+#
+# OUTPUT PARAMETERS:
+#   
+#
+# RETURN:
+#   
+# -----------------------------------------------------------------------------
+def update_servo_pwm(servo_angle):
+    conv_ang = int (servo_angle)
+    sec_per_pulse = MIN_PULSE_WIDTH + ((conv_ang + ANGLE_OFFSET) * SECONDS_PER_DEGREE)
+    duty_cycle = (sec_per_pulse * PWM_FREQUENCY)
+    on_time = (duty_cycle * PERIOD) * ON_TIME_BUFFER
+    gui_main_window.servo_pwm.set_servo_pulsewidth(SERVO_GPIO, on_time)
 
 
 
@@ -273,9 +303,9 @@ def setup_gpio():
     # Set Pin 23 to OUTPUT mode
     GPIO.setup(RIGHT_WHEEL_2_GPIO, GPIO.OUT) 
 
-    # Set Pin ? to INPUT mode
+    # Set Pin 5 to INPUT mode
     GPIO.setup(LEFT_OBST_GPIO, GPIO.IN)
-    # Set Pin ? to INPUT mode
+    # Set Pin 6 to INPUT mode
     GPIO.setup(RIGHT_OBST_GPIO, GPIO.IN)
 
     # Set Pin ? to OUTPUT mode
