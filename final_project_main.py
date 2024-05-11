@@ -199,11 +199,12 @@ def create_gui(left_enable_pwm, right_enable_pwm):
     desc_frame.pack(side=TK.TOP)
     # The directions are written into the frame
     TK.Label(desc_frame, text="DIRECTIONS:").grid(row=0, column=0)
-    TK.Label(desc_frame, text="Move sliders around to adjust the respective motor speeds of the car").grid(row=0, column=1)
     if(g_autominous_mode):
+        TK.Label(desc_frame, text="Move the slider around to adjust the speed of the car").grid(row=0, column=1)
         TK.Label(desc_frame, text="0 = full stop; 100 = full speed").grid(row=2, column=1)
     
     else:
+        TK.Label(desc_frame, text="Move sliders around to adjust the respective motor speeds of the car").grid(row=0, column=1)
         TK.Label(desc_frame, text="-100 = full speed backwards; 100 = full speed forward").grid(row=2, column=1)
 
     TK.Label(desc_frame, text="Press CTRL-c to exit the program").grid(row=3, column=1)
@@ -215,8 +216,12 @@ def create_gui(left_enable_pwm, right_enable_pwm):
     
     # Creates labels for the slider controls
     # Add labels for the frame
-    TK.Label(ctrl_frame, text="Left Motor Speed").grid(row=0, column=0)
-    TK.Label(ctrl_frame, text="Right Motor Speed").grid(row=1, column=0)
+    if(g_autominous_mode):
+        TK.Label(ctrl_frame, text="Left Motor Speed").grid(row=0, column=0)
+        TK.Label(ctrl_frame, text="Right Motor Speed").grid(row=1, column=0)
+    
+    else:
+        TK.Label(ctrl_frame, text="Car Speed").grid(row=0, column=0)
 
     # Pack the new frame into the window at the bottom
     ctrl_frame.pack(side=TK.BOTTOM)
@@ -227,16 +232,15 @@ def create_gui(left_enable_pwm, right_enable_pwm):
     
     # A slider object for pi_pwm1 (BLU LED segment PWM) is created and properly placed
     if(g_autominous_mode):
-        scaleAngle = TK.Scale(ctrl_frame, from_=AUTO_MIN_SPEED, to=MAX_SPEED, orient=TK.HORIZONTAL, command=update_left_enable_pwm)
-        scaleAngle.grid(row=0, column=1)
-        scaleAngle = TK.Scale(ctrl_frame, from_=AUTO_MIN_SPEED, to=MAX_SPEED, orient=TK.HORIZONTAL, command=update_right_enable_pwm)
-        scaleAngle.grid(row=1, column=1)
+        car_speed = TK.Scale(ctrl_frame, from_=AUTO_MIN_SPEED, to=MAX_SPEED, orient=TK.HORIZONTAL, command=update_car_pwm)
+        car_speed.grid(row=0, column=1)
+        
     
     else:
-        scaleAngle = TK.Scale(ctrl_frame, from_=MAN_MIN_SPEED, to=MAX_SPEED, orient=TK.HORIZONTAL, command=update_left_enable_pwm)
-        scaleAngle.grid(row=0, column=1)
-        scaleAngle = TK.Scale(ctrl_frame, from_=MAN_MIN_SPEED, to=MAX_SPEED, orient=TK.HORIZONTAL, command=update_right_enable_pwm)
-        scaleAngle.grid(row=1, column=1)
+        left_motor_speed = TK.Scale(ctrl_frame, from_=MAN_MIN_SPEED, to=MAX_SPEED, orient=TK.HORIZONTAL, command=update_left_enable_pwm)
+        left_motor_speed.grid(row=0, column=1)
+        right_motor_speed = TK.Scale(ctrl_frame, from_=MAN_MIN_SPEED, to=MAX_SPEED, orient=TK.HORIZONTAL, command=update_right_enable_pwm)
+        right_motor_speed.grid(row=1, column=1)
 
     # Sets the window to the proper position.
     gui_main_window.geometry(WINDOW_GEOMETRY)
@@ -256,19 +260,38 @@ def create_gui(left_enable_pwm, right_enable_pwm):
 # RETURN:
 #   
 # -----------------------------------------------------------------------------
-def update_left_enable_pwm(left_inputed_speed):
-    if(not g_autominous_mode):
-        if(left_inputed_speed > 0):
-            GPIO.output(LEFT_WHEEL_1_GPIO,GPIO.HIGH) 
-            GPIO.output(LEFT_WHEEL_2_GPIO,GPIO.LOW)
+def update_car_pwm(car_speed):
+    left_enable_pwm.ChangeDutyCycle(car_speed)
+    right_enable_pwm.ChangeDutyCycle(car_speed)
+
+
+
+# -----------------------------------------------------------------------------
+# DESCRIPTION
+#   
+#
+# INPUT PARAMETERS:
+#   
+#
+# OUTPUT PARAMETERS:
+#   
+#
+# RETURN:
+#   
+# -----------------------------------------------------------------------------
+def update_left_enable_pwm(left_motor_speed):
+    
+    if(left_inputed_speed > 0):
+        GPIO.output(LEFT_WHEEL_1_GPIO,GPIO.HIGH) 
+        GPIO.output(LEFT_WHEEL_2_GPIO,GPIO.LOW)
         
-        elif(left_inputed_speed < 0):
-            GPIO.output(LEFT_WHEEL_1_GPIO,GPIO.LOW) 
-            GPIO.output(LEFT_WHEEL_2_GPIO,GPIO.HIGH)
+    elif(left_inputed_speed < 0):
+        GPIO.output(LEFT_WHEEL_1_GPIO,GPIO.LOW) 
+        GPIO.output(LEFT_WHEEL_2_GPIO,GPIO.HIGH)
         
-        else:
-            GPIO.output(LEFT_WHEEL_1_GPIO,GPIO.LOW) 
-            GPIO.output(LEFT_WHEEL_2_GPIO,GPIO.LOW)
+    else:
+        GPIO.output(LEFT_WHEEL_1_GPIO,GPIO.LOW) 
+        GPIO.output(LEFT_WHEEL_2_GPIO,GPIO.LOW)
 
     left_enable_pwm.ChangeDutyCycle(abs(left_inputed_speed))
 
@@ -287,19 +310,18 @@ def update_left_enable_pwm(left_inputed_speed):
 # RETURN:
 #   
 # -----------------------------------------------------------------------------
-def update_right_enable_pwm(right_inputed_speed):
-    if(not g_autominous_mode):
-        if(right_inputed_speed > 0):
-            GPIO.output(RIGHT_WHEEL_1_GPIO,GPIO.HIGH) 
-            GPIO.output(RIGHT_WHEEL_2_GPIO,GPIO.LOW)
+def update_right_enable_pwm(right_motor_speed):
+    if(right_inputed_speed > 0):
+        GPIO.output(RIGHT_WHEEL_1_GPIO,GPIO.HIGH) 
+        GPIO.output(RIGHT_WHEEL_2_GPIO,GPIO.LOW)
         
-        elif(right_inputed_speed < 0):
-            GPIO.output(RIGHT_WHEEL_1_GPIO,GPIO.LOW) 
-            GPIO.output(RIGHT_WHEEL_2_GPIO,GPIO.HIGH)
+    elif(right_inputed_speed < 0):
+        GPIO.output(RIGHT_WHEEL_1_GPIO,GPIO.LOW) 
+        GPIO.output(RIGHT_WHEEL_2_GPIO,GPIO.HIGH)
         
-        else:
-            GPIO.output(RIGHT_WHEEL_1_GPIO,GPIO.LOW) 
-            GPIO.output(RIGHT_WHEEL_2_GPIO,GPIO.LOW)
+    else:
+        GPIO.output(RIGHT_WHEEL_1_GPIO,GPIO.LOW) 
+        GPIO.output(RIGHT_WHEEL_2_GPIO,GPIO.LOW)
 
     right_enable_pwm.ChangeDutyCycle(abs(right_inputed_speed))
 
