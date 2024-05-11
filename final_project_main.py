@@ -202,7 +202,7 @@ def create_gui(left_enable_pwm, right_enable_pwm):
     TK.Label(desc_frame, text="DIRECTIONS:").grid(row=0, column=0)
     TK.Label(desc_frame, text="Move sliders around to adjust the respective motor speeds of the car").grid(row=0, column=1)
     if(g_autominous_mode):
-        TK.Label(desc_frame, text="0 = full stop; 100 = full speed forward").grid(row=2, column=1)
+        TK.Label(desc_frame, text="0 = full stop; 100 = full speed").grid(row=2, column=1)
     
     else:
         TK.Label(desc_frame, text="-100 = full speed backwards; 100 = full speed forward").grid(row=2, column=1)
