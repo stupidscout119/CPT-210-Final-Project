@@ -186,8 +186,13 @@ def create_gui(left_enable_pwm, right_enable_pwm):
 
     # Creates the main GUI window
     gui_main_window = TK.Tk()
+
     #Creates the main window's title
-    gui_main_window.title("CPT-210: Final Project V1")
+    if(g_autominous_mode):
+        gui_main_window.title("CPT-210: Final Project V1 (Automatous Mode)")
+    
+    else:
+        gui_main_window.title("CPT-210: Final Project V1 (Manual Mode)")
     
     # Creates a frame that holds the instructions on how to use the GUI
     desc_frame = TK.Frame(gui_main_window)
