@@ -264,7 +264,7 @@ def update_left_enable_pwm(left_inputed_speed):
             GPIO.output(LEFT_WHEEL_1_GPIO,GPIO.LOW) 
             GPIO.output(LEFT_WHEEL_2_GPIO,GPIO.LOW)
 
-    left_enable_pwm.ChangeDutyCycle(left_inputed_speed)
+    left_enable_pwm.ChangeDutyCycle(abs(left_inputed_speed))
 
 
 
@@ -295,7 +295,7 @@ def update_right_enable_pwm(right_inputed_speed):
             GPIO.output(RIGHT_WHEEL_1_GPIO,GPIO.LOW) 
             GPIO.output(RIGHT_WHEEL_2_GPIO,GPIO.LOW)
 
-    right_enable_pwm.ChangeDutyCycle(right_inputed_speed)
+    right_enable_pwm.ChangeDutyCycle(abs(right_inputed_speed))
 
 
 
