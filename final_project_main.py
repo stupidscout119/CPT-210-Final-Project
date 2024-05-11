@@ -40,13 +40,14 @@ RIGHT_OBST_GPIO         = 6
 #LED_GPIO                = ?
 FULL_SPEED              = 100
 NO_SPEED                = 0
-MIN_SPEED               = -100
+MAN_MIN_SPEED           = -100
+AUTO_MIN_SPEED          = 0
 MAX_SPEED               = 100
 
-TRIG_GPIO    = ?
-ECHO_GPIO    = ?
-MAX_DISTANCE = 220
-TIME_OUT     = MAX_DISTANCE * 60
+TRIG_GPIO      = ?
+ECHO_GPIO      = ?
+MAX_DISTANCE   = 220
+TIME_OUT       = MAX_DISTANCE * 60
 NANO_SEC_10    = 0.000001
 REVERT_DIVIDE  = 1000000
 SPEED_OF_SOUND = 340.00
@@ -54,8 +55,8 @@ REFLECT_NEGATE = 2.0
 DIVIDE_BY_TIME = 10000.00
 
 # Constants for PWM functions
-START_DUTY_CYCLE = 0
-STOP_DUTY_CYCLE  = 100
+NO_DUTY_CYCLE = 0
+FULL_DUTY_CYCLE  = 100
 DUTY_CYCLE_DELAY = 0.01
 TURNAROUND_TIME  = 0.5
 PWM_FREQUENCY    = 1000
@@ -82,29 +83,6 @@ DECREMENT = -1
 MIN_PULSE_WIDTH = 0.0005
 MAX_PULSE_WIDTH = 0.0025
 
-# sec
-PIG_MIN_PULSE_WIDTH = 500
-PIG_MAX_PULSE_WIDTH = 2500
-
-# angle
-MIN_ANGLE = -90
-MAX_ANGLE = 90
-ANGLE_OFFSET = 90
-
-# angle
-MIN_ROTATION = 0
-MAX_ROTATION = 180
-
-PERIOD_LENGTH = 0.02
-
-CONVERT_TO_PERCENT = 100
-
-SECONDS_PER_DEGREE = (MAX_PULSE_WIDTH - MIN_PULSE_WIDTH) / MAX_ROTATION
-
-PERIOD = 1 / PWM_FREQUENCY
-
-ON_TIME_BUFFER = 1E6
-
 SERVER_HOST = '0.0.0.0'
 SERVER_PORT = 80
 
@@ -114,6 +92,7 @@ START_INDEX = 0
 # Global variables to be used
 #---------------------------------------------------------------------
 # Debugging features flags
+g_autominous_mode       = False
 g_adaptive_obst_driving = False
 g_adaptive_path_driving = False
 
@@ -131,12 +110,17 @@ def main ():
     left_enable_pwm, right_enable_pwm = setup_gpio()
 
     # Starts the PWM of both h-bridge enables
-    left_enable_pwm.start(START_DUTY_CYCLE)
-    right_enable_pwm.start(START_DUTY_CYCLE)
+    if(g_autominous_mode):
+        left_enable_pwm.start(FULL_DUTY_CYCLE)
+        right_enable_pwm.start(FULL_DUTY_CYCLE)
 
+    else:
+        left_enable_pwm.start(NO_DUTY_CYCLE)
+        right_enable_pwm.start(NO_DUTY_CYCLE)
+    
     create_gui(left_enable_pwm, right_enable_pwm)
     
-    while (input to shut car down is entered):
+    while (True):
        loop(left_enable_pwm, right_enable_pwm)
 
   except Exception as Error:
@@ -164,22 +148,22 @@ def main ():
 # -----------------------------------------------------------------------------
 def loop():
     gui_main_window.mainloop()
-    direction_state = FORWARD
     
-    if(g_adaptive_obst_driving):
-        direction_state = determine_distance(gpio_pin, on_time, off_time, repeat_alarm)
+    if(g_autominous_mode):
+        if(g_adaptive_obst_driving):
+            direction_state = determine_distance(gpio_pin, on_time, off_time, repeat_alarm)
 
-    left_enable_pwm, right_enable_pwm = forward_drive_direction(direction_state, left_enable_pwm, right_enable_pwm)
-    
-    if(g_adaptive_path_driving and direction_state != STOP):
-        turn_left_flag = determine_turn_direction(LEFT_OBST_GPIO, GPIO.LOW)
-        turn_right_flag = determine_turn_direction(RIGHT_OBST_GPIO, GPIO.LOW)
-        if(turn_left_flag != turn_right_flag):
-            if(turn_left_flag):
-                left_enable_pwm, right_enable_pwm = turn_left(direction_state, left_enable_pwm, right_enable_pwm)
+        left_enable_pwm, right_enable_pwm = forward_drive_direction(direction_state, left_enable_pwm, right_enable_pwm)
+        
+        if(g_adaptive_path_driving and direction_state != STOP):
+            turn_left_flag = determine_turn_direction(LEFT_OBST_GPIO, GPIO.LOW)
+            turn_right_flag = determine_turn_direction(RIGHT_OBST_GPIO, GPIO.LOW)
+            if(turn_left_flag != turn_right_flag):
+                if(turn_left_flag):
+                    left_enable_pwm, right_enable_pwm = turn_left(direction_state, left_enable_pwm, right_enable_pwm)
 
-            if(turn_right_flag):
-                left_enable_pwm, right_enable_pwm = turn_right(direction_state, left_enable_pwm, right_enable_pwm)
+                if(turn_right_flag):
+                    left_enable_pwm, right_enable_pwm = turn_right(direction_state, left_enable_pwm, right_enable_pwm)
     
        
        
@@ -215,7 +199,11 @@ def create_gui(left_enable_pwm, right_enable_pwm):
     # The directions are written into the frame
     TK.Label(desc_frame, text="DIRECTIONS:").grid(row=0, column=0)
     TK.Label(desc_frame, text="Move sliders around to adjust the respective motor speeds of the car").grid(row=0, column=1)
-    TK.Label(desc_frame, text="-100 = full speed backwards; 100 = full speed forward").grid(row=2, column=1)
+    if(g_autominous_mode):
+        TK.Label(desc_frame, text="0 = full stop; 100 = full speed forward").grid(row=2, column=1)
+    
+    else:
+        TK.Label(desc_frame, text="-100 = full speed backwards; 100 = full speed forward").grid(row=2, column=1)
     
     # Creates a frame that will hold the controls in the main window
     ctrl_frame = TK.Frame(gui_main_window)
@@ -235,13 +223,82 @@ def create_gui(left_enable_pwm, right_enable_pwm):
     gui_main_window.right_enable_pwm = right_enable_pwm
     
     # A slider object for pi_pwm1 (BLU LED segment PWM) is created and properly placed
-    scaleAngle = TK.Scale(ctrl_frame, from_=MIN_SPEED, to=MAX_SPEED, orient=TK.HORIZONTAL, command=update_left_enable_pwm)
-    scaleAngle.grid(row=0, column=1)
-    scaleAngle = TK.Scale(ctrl_frame, from_=MIN_SPEED, to=MAX_SPEED, orient=TK.HORIZONTAL, command=update_right_enable_pwm)
-    scaleAngle.grid(row=0, column=1)
+    if(g_autominous_mode):
+        scaleAngle = TK.Scale(ctrl_frame, from_=AUTO_MIN_SPEED, to=MAX_SPEED, orient=TK.HORIZONTAL, command=update_left_enable_pwm)
+        scaleAngle.grid(row=0, column=1)
+        scaleAngle = TK.Scale(ctrl_frame, from_=AUTO_MIN_SPEED, to=MAX_SPEED, orient=TK.HORIZONTAL, command=update_right_enable_pwm)
+        scaleAngle.grid(row=1, column=1)
+    
+    else:
+        scaleAngle = TK.Scale(ctrl_frame, from_=MAN_MIN_SPEED, to=MAX_SPEED, orient=TK.HORIZONTAL, command=update_left_enable_pwm)
+        scaleAngle.grid(row=0, column=1)
+        scaleAngle = TK.Scale(ctrl_frame, from_=MAN_MIN_SPEED, to=MAX_SPEED, orient=TK.HORIZONTAL, command=update_right_enable_pwm)
+        scaleAngle.grid(row=1, column=1)
 
     # Sets the window to the proper position.
     gui_main_window.geometry(WINDOW_GEOMETRY)
+
+
+
+# -----------------------------------------------------------------------------
+# DESCRIPTION
+#   
+#
+# INPUT PARAMETERS:
+#   
+#
+# OUTPUT PARAMETERS:
+#   
+#
+# RETURN:
+#   
+# -----------------------------------------------------------------------------
+def update_left_enable_pwm(left_inputed_speed):
+    if(not g_autominous_mode):
+        if(left_inputed_speed > 0):
+            GPIO.output(LEFT_WHEEL_1_GPIO,GPIO.HIGH) 
+            GPIO.output(LEFT_WHEEL_2_GPIO,GPIO.LOW)
+        
+        elif(left_inputed_speed < 0):
+            GPIO.output(LEFT_WHEEL_1_GPIO,GPIO.LOW) 
+            GPIO.output(LEFT_WHEEL_2_GPIO,GPIO.HIGH)
+        
+        else:
+            GPIO.output(LEFT_WHEEL_1_GPIO,GPIO.LOW) 
+            GPIO.output(LEFT_WHEEL_2_GPIO,GPIO.LOW)
+
+    left_enable_pwm.ChangeDutyCycle(left_inputed_speed)
+
+
+
+# -----------------------------------------------------------------------------
+# DESCRIPTION
+#   
+#
+# INPUT PARAMETERS:
+#   
+#
+# OUTPUT PARAMETERS:
+#   
+#
+# RETURN:
+#   
+# -----------------------------------------------------------------------------
+def update_right_enable_pwm(right_inputed_speed):
+    if(not g_autominous_mode):
+        if(right_inputed_speed > 0):
+            GPIO.output(RIGHT_WHEEL_1_GPIO,GPIO.HIGH) 
+            GPIO.output(RIGHT_WHEEL_2_GPIO,GPIO.LOW)
+        
+        elif(right_inputed_speed < 0):
+            GPIO.output(RIGHT_WHEEL_1_GPIO,GPIO.LOW) 
+            GPIO.output(RIGHT_WHEEL_2_GPIO,GPIO.HIGH)
+        
+        else:
+            GPIO.output(RIGHT_WHEEL_1_GPIO,GPIO.LOW) 
+            GPIO.output(RIGHT_WHEEL_2_GPIO,GPIO.LOW)
+
+    right_enable_pwm.ChangeDutyCycle(right_inputed_speed)
 
 
 
@@ -430,9 +487,6 @@ def turn_left(direction_state, left_enable_pwm, right_enable_pwm):
 
         GPIO.output(RIGHT_WHEEL_1_GPIO,GPIO.HIGH)
         GPIO.output(RIGHT_WHEEL_2_GPIO,GPIO.LOW)
-
-        right_enable_pwm.ChangeDutyCycle(FULL_SPEED)
-        left_enable_pwm.ChangeDutyCycle(NO_SPEED)
     
     else:
         GPIO.output(LEFT_WHEEL_1_GPIO,GPIO.LOW) 
@@ -440,9 +494,6 @@ def turn_left(direction_state, left_enable_pwm, right_enable_pwm):
 
         GPIO.output(RIGHT_WHEEL_1_GPIO,GPIO.LOW)
         GPIO.output(RIGHT_WHEEL_2_GPIO,GPIO.LOW)
-
-        right_enable_pwm.ChangeDutyCycle(NO_SPEED)
-        left_enable_pwm.ChangeDutyCycle(FULL_SPEED)
     
     return left_enable_pwm, right_enable_pwm
 
@@ -470,9 +521,6 @@ def turn_right(direction_state, left_enable_pwm, right_enable_pwm):
 
         GPIO.output(RIGHT_WHEEL_1_GPIO,GPIO.LOW)
         GPIO.output(RIGHT_WHEEL_2_GPIO,GPIO.LOW)
-
-        right_enable_pwm.ChangeDutyCycle(NO_SPEED)
-        left_enable_pwm.ChangeDutyCycle(FULL_SPEED)
     
     else:
         GPIO.output(LEFT_WHEEL_1_GPIO,GPIO.LOW) 
@@ -480,9 +528,6 @@ def turn_right(direction_state, left_enable_pwm, right_enable_pwm):
 
         GPIO.output(RIGHT_WHEEL_1_GPIO,GPIO.LOW)
         GPIO.output(RIGHT_WHEEL_2_GPIO,GPIO.HIGH)
-
-        right_enable_pwm.ChangeDutyCycle(FULL_SPEED)
-        left_enable_pwm.ChangeDutyCycle(NO_SPEED)
 
     return left_enable_pwm, right_enable_pwm
 
@@ -507,9 +552,6 @@ def forward_drive_direction(direction_state, left_enable_pwm, right_enable_pwm):
 
         GPIO.output(RIGHT_WHEEL_1_GPIO,GPIO.HIGH)
         GPIO.output(RIGHT_WHEEL_2_GPIO,GPIO.LOW)
-
-        right_enable_pwm.ChangeDutyCycle(FULL_SPEED)
-        left_enable_pwm.ChangeDutyCycle(FULL_SPEED)
     
     elif(direction_state == BACKWARDS):
         GPIO.output(LEFT_WHEEL_1_GPIO,GPIO.LOW) 
@@ -518,18 +560,12 @@ def forward_drive_direction(direction_state, left_enable_pwm, right_enable_pwm):
         GPIO.output(RIGHT_WHEEL_1_GPIO,GPIO.LOW)
         GPIO.output(RIGHT_WHEEL_2_GPIO,GPIO.HIGH)
 
-        right_enable_pwm.ChangeDutyCycle(FULL_SPEED)
-        left_enable_pwm.ChangeDutyCycle(FULL_SPEED)
-
     else:
         GPIO.output(LEFT_WHEEL_1_GPIO,GPIO.LOW) 
         GPIO.output(LEFT_WHEEL_2_GPIO,GPIO.LOW) 
 
         GPIO.output(RIGHT_WHEEL_1_GPIO,GPIO.LOW)
         GPIO.output(RIGHT_WHEEL_2_GPIO,GPIO.LOW)
-
-        right_enable_pwm.ChangeDutyCycle(NO_SPEED)
-        left_enable_pwm.ChangeDutyCycle(NO_SPEED)
 
     return left_enable_pwm, right_enable_pwm 
    
