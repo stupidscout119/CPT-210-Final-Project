@@ -151,7 +151,7 @@ def loop():
     
     if(g_autominous_mode):
         if(g_adaptive_obst_driving):
-            direction_state = determine_distance(gpio_pin, on_time, off_time, repeat_alarm)
+            direction_state = determine_distance(gpio_pin)
 
         left_enable_pwm, right_enable_pwm = forward_drive_direction(direction_state, left_enable_pwm, right_enable_pwm)
         
@@ -164,10 +164,7 @@ def loop():
 
                 if(turn_right_flag):
                     left_enable_pwm, right_enable_pwm = turn_right(direction_state, left_enable_pwm, right_enable_pwm)
-    
-       
-       
-   #time.sleep(amount of time needed to let the car drive)
+    #time.sleep(amount of time needed to let the car drive)
 
 
 
@@ -299,28 +296,6 @@ def update_right_enable_pwm(right_inputed_speed):
             GPIO.output(RIGHT_WHEEL_2_GPIO,GPIO.LOW)
 
     right_enable_pwm.ChangeDutyCycle(right_inputed_speed)
-
-
-
-# -----------------------------------------------------------------------------
-# DESCRIPTION
-#   
-#
-# INPUT PARAMETERS:
-#   
-#
-# OUTPUT PARAMETERS:
-#   
-#
-# RETURN:
-#   
-# -----------------------------------------------------------------------------
-def update_servo_pwm(servo_angle):
-    conv_ang = int (servo_angle)
-    sec_per_pulse = MIN_PULSE_WIDTH + ((conv_ang + ANGLE_OFFSET) * SECONDS_PER_DEGREE)
-    duty_cycle = (sec_per_pulse * PWM_FREQUENCY)
-    on_time = (duty_cycle * PERIOD) * ON_TIME_BUFFER
-    gui_main_window.servo_pwm.set_servo_pulsewidth(SERVO_GPIO, on_time)
 
 
 
@@ -480,7 +455,7 @@ def determine_distance(gpio_pin):
 # RETURN:
 #   none
 # -----------------------------------------------------------------------------
-def turn_left(direction_state, left_enable_pwm, right_enable_pwm):
+def turn_left(direction_state):
     if(direction_state == FORWARD):
         GPIO.output(LEFT_WHEEL_1_GPIO,GPIO.LOW) 
         GPIO.output(LEFT_WHEEL_2_GPIO,GPIO.LOW) 
@@ -494,12 +469,8 @@ def turn_left(direction_state, left_enable_pwm, right_enable_pwm):
 
         GPIO.output(RIGHT_WHEEL_1_GPIO,GPIO.LOW)
         GPIO.output(RIGHT_WHEEL_2_GPIO,GPIO.LOW)
-    
-    return left_enable_pwm, right_enable_pwm
 
-    
    
-
 
 # -----------------------------------------------------------------------------
 # DESCRIPTION
@@ -514,7 +485,7 @@ def turn_left(direction_state, left_enable_pwm, right_enable_pwm):
 # RETURN:
 #   none
 # -----------------------------------------------------------------------------
-def turn_right(direction_state, left_enable_pwm, right_enable_pwm):
+def turn_right(direction_state):
    if(direction_state == FORWARD):
         GPIO.output(LEFT_WHEEL_1_GPIO,GPIO.HIGH) 
         GPIO.output(LEFT_WHEEL_2_GPIO,GPIO.LOW) 
@@ -529,7 +500,6 @@ def turn_right(direction_state, left_enable_pwm, right_enable_pwm):
         GPIO.output(RIGHT_WHEEL_1_GPIO,GPIO.LOW)
         GPIO.output(RIGHT_WHEEL_2_GPIO,GPIO.HIGH)
 
-    return left_enable_pwm, right_enable_pwm
 
 
 # -----------------------------------------------------------------------------
@@ -545,7 +515,7 @@ def turn_right(direction_state, left_enable_pwm, right_enable_pwm):
 # RETURN:
 #   none
 # -----------------------------------------------------------------------------
-def forward_drive_direction(direction_state, left_enable_pwm, right_enable_pwm):
+def forward_drive_direction(direction_state):
    if(direction_state == FORWARD):
         GPIO.output(LEFT_WHEEL_1_GPIO,GPIO.HIGH) 
         GPIO.output(LEFT_WHEEL_2_GPIO,GPIO.LOW) 
@@ -566,8 +536,6 @@ def forward_drive_direction(direction_state, left_enable_pwm, right_enable_pwm):
 
         GPIO.output(RIGHT_WHEEL_1_GPIO,GPIO.LOW)
         GPIO.output(RIGHT_WHEEL_2_GPIO,GPIO.LOW)
-
-    return left_enable_pwm, right_enable_pwm 
    
 
 
