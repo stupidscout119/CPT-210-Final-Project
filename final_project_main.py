@@ -15,8 +15,6 @@
 #*****************************************************************************
 import RPi.GPIO as GPIO
 import time
-import LCD1602
-from bottle import route, run, template
 import Tkinter as TK
 
 
@@ -123,8 +121,9 @@ def main ():
     while (True):
        loop(left_enable_pwm, right_enable_pwm)
 
-  except Exception as Error:
-    print(f"Unexpected error detected: {Error}")
+  except KeyboardInterrupt:
+        print()
+        print("CTRL-c detected.")
 
   finally:
     destroy(left_enable_pwm, right_enable_pwm)
@@ -206,6 +205,8 @@ def create_gui(left_enable_pwm, right_enable_pwm):
     
     else:
         TK.Label(desc_frame, text="-100 = full speed backwards; 100 = full speed forward").grid(row=2, column=1)
+
+    TK.Label(desc_frame, text="Press CTRL-c to exit the program").grid(row=3, column=1)
     
     # Creates a frame that will hold the controls in the main window
     ctrl_frame = TK.Frame(gui_main_window)
