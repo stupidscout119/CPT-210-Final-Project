@@ -676,6 +676,14 @@ def stop_man_car_pwm():
 def toggle_mode():
     g_autominous_mode = not g_autominous_mode
     
+    if(g_autominous_mode):
+      left_enable_pwm.start(FULL_DUTY_CYCLE)
+      right_enable_pwm.start(FULL_DUTY_CYCLE)
+
+    else:
+      left_enable_pwm.start(NO_DUTY_CYCLE)
+      right_enable_pwm.start(NO_DUTY_CYCLE)
+    
 
 
 # -----------------------------------------------------------------------------
