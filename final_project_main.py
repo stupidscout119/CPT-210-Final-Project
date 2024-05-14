@@ -34,8 +34,8 @@ LEFT_WHEEL_1_GPIO       = 27
 LEFT_WHEEL_2_GPIO       = 17
 RIGHT_WHEEL_1_GPIO      = 24
 RIGHT_WHEEL_2_GPIO      = 23
-LEFT_OBST_GPIO          = 5
-RIGHT_OBST_GPIO         = 6
+LEFT_OBST_GPIO          = 6
+RIGHT_OBST_GPIO         = 5
 FULL_SPEED              = 100
 NO_SPEED                = 0
 MAN_MIN_SPEED           = -100
@@ -68,10 +68,7 @@ WINDOW_GEOMETRY = WINDOW_SIZE + WINDOW_OFFSET
 
 # Delays with varying lengths
 READ_DELAY_10NS  = 0.00001
-READ_DELAY_10MS  = 0.01
-READ_DELAY_200MS = 0.2
-READ_DELAY_500MS = 0.5
-READ_DELAY_1SEC  = 1
+READ_DELAY_5MS  = 0.005
 
 # Increments/decrement
 INCREMENT = 1
@@ -211,7 +208,7 @@ def loop():
                 else:
                     print("Detect Both")
             
-    #time.sleep(amount of time needed to let the car drive)
+      time.sleep(READ_DELAY_5MS)
 
 
 
