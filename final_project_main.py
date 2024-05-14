@@ -16,6 +16,7 @@
 import RPi.GPIO as GPIO
 import time
 import tkinter as TK
+import threading
 
 
 #*****************************************************************************
@@ -35,15 +36,14 @@ RIGHT_WHEEL_1_GPIO      = 24
 RIGHT_WHEEL_2_GPIO      = 23
 LEFT_OBST_GPIO          = 5
 RIGHT_OBST_GPIO         = 6
-#LED_GPIO                = ?
 FULL_SPEED              = 100
 NO_SPEED                = 0
 MAN_MIN_SPEED           = -100
 AUTO_MIN_SPEED          = 0
 MAX_SPEED               = 100
 
-#TRIG_GPIO      = ?
-#ECHO_GPIO      = ?
+TRIG_GPIO      = 26
+ECHO_GPIO      = 16
 MAX_DISTANCE   = 220
 TIME_OUT       = MAX_DISTANCE * 60
 NANO_SEC_10    = 0.000001
@@ -103,24 +103,22 @@ def main ():
   #---------------------------------------------------
   # Variables to be used in main
   #---------------------------------------------------
-  # N/A
+  global g_program_quit
 
   left_enable_pwm, right_enable_pwm = setup_gpio()
 
   # Starts the PWM of both h-bridge enables
-  if(g_autominous_mode):
-      left_enable_pwm.start(FULL_DUTY_CYCLE)
-      right_enable_pwm.start(FULL_DUTY_CYCLE)
+  left_enable_pwm.start(NO_DUTY_CYCLE)
+  right_enable_pwm.start(NO_DUTY_CYCLE)
 
-  else:
-      left_enable_pwm.start(NO_DUTY_CYCLE)
-      right_enable_pwm.start(NO_DUTY_CYCLE)
-    
-  create_gui(left_enable_pwm, right_enable_pwm)
-    
+  path_detection = threading.Thread(target=loop, args=())
+  path_detection.start()
+
   while (not g_program_quit):
-      loop(left_enable_pwm, right_enable_pwm)
-
+      create_gui(left_enable_pwm, right_enable_pwm)
+      gui_main_window.mainloop()
+   
+  path_detection.join()
   destroy(left_enable_pwm, right_enable_pwm)
     
 
@@ -142,10 +140,10 @@ def setup_gpio():
      # use BCM GPIO numbering scheme
     GPIO.setmode(GPIO.BCM)
     
-    # Set Pin ? to OUTPUT mode
-    #GPIO.setup(TRIG_GPIO, GPIO.OUT)
-    # Set Pin ? to INPUT mode
-    #GPIO.setup(ECHO_GPIO, GPIO.IN)
+    # Set Pin 26 to OUTPUT mode
+    GPIO.setup(TRIG_GPIO, GPIO.OUT)
+    # Set Pin 16 to INPUT mode
+    GPIO.setup(ECHO_GPIO, GPIO.IN)
 
     # Set Pin 22 to OUTPUT mode
     GPIO.setup(LEFT_WHEEL_ENABLE_GPIO, GPIO.OUT)
@@ -165,9 +163,6 @@ def setup_gpio():
     GPIO.setup(LEFT_OBST_GPIO, GPIO.IN)
     # Set Pin 6 to INPUT mode
     GPIO.setup(RIGHT_OBST_GPIO, GPIO.IN)
-
-    # Set Pin ? to OUTPUT mode
-    #GPIO.setup(LED_GPIO, GPIO.OUT) 
 
     # Create PWM Objects
     left_enable_pwm = GPIO.PWM (LEFT_WHEEL_ENABLE_GPIO, PWM_FREQUENCY)
@@ -191,25 +186,31 @@ def setup_gpio():
 # RETURN:
 #   N/A
 # -----------------------------------------------------------------------------
-def loop(left_enable_pwm, right_enable_pwm):
-    if(g_autominous_mode):
-        direction_state = FORWARD
-        if(g_adaptive_obst_driving):
-            direction_state = determine_distance(gpio_pin)
+def loop():
+    global g_program_quit
+    
+    while(not g_program_quit):
+        if(g_autominous_mode):
+            direction_state = FORWARD
+            if(g_adaptive_obst_driving):
+                direction_state = determine_distance(ECHO_GPIO)
 
-        forward_drive_direction(direction_state)
-        
-        if(g_adaptive_path_driving and direction_state != STOP):
-            turn_left_flag = determine_turn_direction(LEFT_OBST_GPIO, GPIO.LOW)
-            turn_right_flag = determine_turn_direction(RIGHT_OBST_GPIO, GPIO.LOW)
-            if(turn_left_flag != turn_right_flag):
-                if(turn_left_flag):
-                    turn_left(direction_state)
+            forward_drive_direction(direction_state)
+            
+            if(g_adaptive_path_driving and direction_state != STOP):
+                turn_left_flag = determine_turn_direction(LEFT_OBST_GPIO, GPIO.LOW)
+                turn_right_flag = determine_turn_direction(RIGHT_OBST_GPIO, GPIO.LOW)
+                if(turn_left_flag != turn_right_flag):
+                    if(turn_left_flag):
+                        turn_left(direction_state)
+                        print("Detect Left")
 
-                if(turn_right_flag):
-                    turn_right(direction_state)
-                    
-    gui_main_window.mainloop()
+                    if(turn_right_flag):
+                        turn_right(direction_state)
+                        print("Detect Right")
+                else:
+                    print("Detect Both")
+            
     #time.sleep(amount of time needed to let the car drive)
 
 
@@ -257,6 +258,8 @@ def send_trigger_pulse():
 #   distance - The distance between the sensor and a surface
 # -----------------------------------------------------------------------------
 def measure_return_echo(gpio_pin, logic_level, time_out):
+    
+    
     t0 = time.time()
     while(GPIO.input(gpio_pin) != logic_level):
         if((time.time() - t0) > time_out * DIVIDE_BY_TIME):
@@ -440,10 +443,13 @@ def determine_turn_direction(gpio_pin, logic_level):
 # -----------------------------------------------------------------------------
 def create_gui(left_enable_pwm, right_enable_pwm):
     global gui_main_window
+    global g_autominous_mode
+    global g_adaptive_path_driving
+    global g_adaptive_obst_driving
 
     # Creates the main GUI window
     gui_main_window = TK.Tk()
-
+    
     #Creates the main window's title
     if(g_autominous_mode):
         gui_main_window.title("CPT-210: Final Project V2 (Automatous Mode)")
@@ -453,6 +459,7 @@ def create_gui(left_enable_pwm, right_enable_pwm):
     
     # Creates a frame that holds the instructions on how to use the GUI
     desc_frame = TK.Frame(gui_main_window)
+    
     # Packs the frame inside the main window
     desc_frame.pack(side=TK.TOP)
     # The directions are written into the frame
@@ -482,7 +489,6 @@ def create_gui(left_enable_pwm, right_enable_pwm):
     ctrl_frame = TK.Frame(gui_main_window)
     ctrl_frame.pack(side=TK.BOTTOM)
 
-    
     # Creates labels for the slider controls
     # Add labels for the frame
     if(g_autominous_mode):
@@ -529,7 +535,7 @@ def create_gui(left_enable_pwm, right_enable_pwm):
 
     # Sets the window to the proper position.
     gui_main_window.geometry(WINDOW_GEOMETRY)
-
+    
 
 
 # -----------------------------------------------------------------------------
@@ -674,16 +680,20 @@ def stop_man_car_pwm():
 #   
 # -----------------------------------------------------------------------------
 def toggle_mode():
+    global g_autominous_mode
+    global gui_main_window
+    
     g_autominous_mode = not g_autominous_mode
     
     if(g_autominous_mode):
-      left_enable_pwm.start(FULL_DUTY_CYCLE)
-      right_enable_pwm.start(FULL_DUTY_CYCLE)
+      gui_main_window.left_enable_pwm.start(NO_DUTY_CYCLE)
+      gui_main_window.right_enable_pwm.start(NO_DUTY_CYCLE)
 
     else:
-      left_enable_pwm.start(NO_DUTY_CYCLE)
-      right_enable_pwm.start(NO_DUTY_CYCLE)
-    
+      gui_main_window.left_enable_pwm.start(NO_DUTY_CYCLE)
+      gui_main_window.right_enable_pwm.start(NO_DUTY_CYCLE)
+      
+    gui_main_window.destroy()
 
 
 # -----------------------------------------------------------------------------
@@ -700,6 +710,9 @@ def toggle_mode():
 #   
 # -----------------------------------------------------------------------------
 def toggle_follow_path():
+    global g_adaptive_path_driving
+    
+    gui_main_window.destroy()
     g_adaptive_path_driving = not g_adaptive_path_driving    
     
     
@@ -718,6 +731,9 @@ def toggle_follow_path():
 #   
 # -----------------------------------------------------------------------------
 def toggle_avoid_obstacles():
+    global g_adaptive_obst_driving
+    
+    gui_main_window.destroy()
     g_adaptive_obst_driving = not g_adaptive_obst_driving  
 
 
@@ -736,6 +752,11 @@ def toggle_avoid_obstacles():
 #   
 # -----------------------------------------------------------------------------
 def quit_program():
+    global g_program_quit
+    global g_autominous_mode
+    
+    gui_main_window.destroy()
+    
     g_program_quit = not g_program_quit     
 
 
@@ -780,6 +801,8 @@ def mode_status(flag_var):
 #   none
 # -----------------------------------------------------------------------------
 def destroy(left_enable_pwm, right_enable_pwm):
+    global gui_main_window
+    
     left_enable_pwm.stop()
     right_enable_pwm.stop()
     GPIO.cleanup()
