@@ -24,7 +24,8 @@ import threading
 #*****************************************************************************
 
 # cm
-OBST_MAX_DIST           = 11.43
+OBST_MIN_DIST           = 11.43
+OBST_MAX_DIST           = 20
 FORWARD                 = 1
 BACKWARDS               = -1
 STOP                    = 0
@@ -68,7 +69,8 @@ WINDOW_GEOMETRY = WINDOW_SIZE + WINDOW_OFFSET
 
 # Delays with varying lengths
 READ_DELAY_10NS  = 0.00001
-READ_DELAY_5MS  = 0.005
+READ_DELAY_50MS  = 0.05
+READ_DELAY_100MS = 0.1
 
 # Increments/decrement
 INCREMENT = 1
@@ -91,6 +93,7 @@ g_autominous_mode       = False
 g_adaptive_obst_driving = False
 g_adaptive_path_driving = False
 g_program_quit          = False
+g_direction_state       = FORWARD
 
 
 #---------------------------------------------------------------------
@@ -108,15 +111,16 @@ def main ():
   left_enable_pwm.start(NO_DUTY_CYCLE)
   right_enable_pwm.start(NO_DUTY_CYCLE)
 
-  path_detection = threading.Thread(target=loop, args=())
+  path_detection = threading.Thread(target=determine_turn, args=(left_enable_pwm, right_enable_pwm,))
   path_detection.start()
+  obst_detection = threading.Thread(target=determine_direction, args=())
+  obst_detection.start()
 
   while (not g_program_quit):
       create_gui(left_enable_pwm, right_enable_pwm)
       gui_main_window.mainloop()
    
-  path_detection.join()
-  destroy(left_enable_pwm, right_enable_pwm)
+  destroy(left_enable_pwm, right_enable_pwm, path_detection, obst_detection)
     
 
 
@@ -168,11 +172,39 @@ def setup_gpio():
     return left_enable_pwm, right_enable_pwm
 
 
-    
+
 # -----------------------------------------------------------------------------
 # DESCRIPTION
-#   This function holds the reiterative code that accomplishes the main tasks 
-#   of the program. Specifically, 
+#   
+#
+# INPUT PARAMETERS:
+#   
+#
+# OUTPUT PARAMETERS:
+#   none
+#
+# RETURN:
+#    
+# -----------------------------------------------------------------------------
+def determine_direction():
+    global g_program_quit
+    global g_direction_state
+    
+    while(not g_program_quit):
+        if(g_autominous_mode):
+            g_direction_state = FORWARD
+            if(g_adaptive_obst_driving):
+                 g_direction_state = determine_distance(ECHO_GPIO)
+
+            forward_drive_direction(g_direction_state)
+            
+            time.sleep(READ_DELAY_100MS)
+
+
+
+# -----------------------------------------------------------------------------
+# DESCRIPTION
+#   
 #
 # INPUT PARAMETERS:
 #   N/A
@@ -183,32 +215,24 @@ def setup_gpio():
 # RETURN:
 #   N/A
 # -----------------------------------------------------------------------------
-def loop():
+def determine_turn():
     global g_program_quit
+    global g_direction_state
     
     while(not g_program_quit):
         if(g_autominous_mode):
-            direction_state = FORWARD
-            if(g_adaptive_obst_driving):
-                direction_state = determine_distance(ECHO_GPIO)
-
-            forward_drive_direction(direction_state)
-            
-            if(g_adaptive_path_driving and direction_state != STOP):
+            if(g_adaptive_path_driving):
                 turn_left_flag = determine_turn_direction(LEFT_OBST_GPIO, GPIO.LOW)
                 turn_right_flag = determine_turn_direction(RIGHT_OBST_GPIO, GPIO.LOW)
                 if(turn_left_flag != turn_right_flag):
                     if(turn_left_flag):
-                        turn_left(direction_state)
-                        print("Detect Left")
+                        turn_left()
 
                     if(turn_right_flag):
-                        turn_right(direction_state)
-                        print("Detect Right")
-                else:
-                    print("Detect Both")
+                        turn_right()
             
-      time.sleep(READ_DELAY_5MS)
+            time.sleep(READ_DELAY_50MS)
+            
 
 
 
@@ -273,35 +297,30 @@ def measure_return_echo(gpio_pin, logic_level, time_out):
 
 # -----------------------------------------------------------------------------
 # DESCRIPTION
-#   This function will send a trigger signal and receive the reflected signal
-#   to determine the calculated distance to determine if the external alarm
-#   should be sounded at a certain rate in a certain amount of cycles
+#   
 #
 # INPUT PARAMETERS:
-#   gpio_pin - An output pin that will turn on/off the alarm
-#   time_on - The amount of time the alarm will be left on
-#   time_off - The amount of time the alarm will be left off
-#   repeat_alarm - The amount of times the alarm cycle will repeat
+#   
 #
 # OUTPUT PARAMETERS:
 #   none
 #
 # RETURN:
-#    distance - The distance between the sensor and a surface
+#    
 # -----------------------------------------------------------------------------
 def determine_distance(gpio_pin):
-    direction_state = FORWARD
+    g_direction_state = FORWARD
 
     send_trigger_pulse()
     distance = measure_return_echo(ECHO_GPIO, GPIO.HIGH, TIME_OUT)
     
-    if(distance < OBST_MAX_DIST):
-        direction_state = BACKWARDS
+    if(distance < OBST_MIN_DIST):
+        g_direction_state = BACKWARDS
 
-    if(distance == OBST_MAX_DIST):
-        direction_state = STOP
+    if(distance < OBST_MAX_DIST and distance > OBST_MIN_DIST):
+        g_direction_state = STOP
 
-    return direction_state
+    return g_direction_state
 
 
 
@@ -318,23 +337,19 @@ def determine_distance(gpio_pin):
 # RETURN:
 #   none
 # -----------------------------------------------------------------------------
-def turn_left(direction_state):
-    if(direction_state == FORWARD):
+def turn_left():
+    global g_direction_state
+    
+    if(g_direction_state == FORWARD):
         GPIO.output(LEFT_WHEEL_1_GPIO,GPIO.LOW) 
-        GPIO.output(LEFT_WHEEL_2_GPIO,GPIO.LOW) 
-
-        GPIO.output(RIGHT_WHEEL_1_GPIO,GPIO.LOW)
+        GPIO.output(LEFT_WHEEL_2_GPIO,GPIO.HIGH)
+    
+    else:
+        GPIO.output(RIGHT_WHEEL_1_GPIO,GPIO.LOW) 
         GPIO.output(RIGHT_WHEEL_2_GPIO,GPIO.HIGH)
     
-    else:
-        GPIO.output(LEFT_WHEEL_1_GPIO,GPIO.LOW) 
-        GPIO.output(LEFT_WHEEL_2_GPIO,GPIO.HIGH) 
-
-        GPIO.output(RIGHT_WHEEL_1_GPIO,GPIO.LOW)
-        GPIO.output(RIGHT_WHEEL_2_GPIO,GPIO.LOW)
-
-   
-
+    
+        
 # -----------------------------------------------------------------------------
 # DESCRIPTION
 #   
@@ -348,20 +363,16 @@ def turn_left(direction_state):
 # RETURN:
 #   none
 # -----------------------------------------------------------------------------
-def turn_right(direction_state):
-    if(direction_state == FORWARD):
-        GPIO.output(LEFT_WHEEL_1_GPIO,GPIO.HIGH) 
-        GPIO.output(LEFT_WHEEL_2_GPIO,GPIO.LOW) 
-
-        GPIO.output(RIGHT_WHEEL_1_GPIO,GPIO.LOW)
+def turn_right():
+    global g_direction_state
+    
+    if(g_direction_state == FORWARD):
+        GPIO.output(RIGHT_WHEEL_1_GPIO,GPIO.HIGH) 
         GPIO.output(RIGHT_WHEEL_2_GPIO,GPIO.LOW)
     
     else:
-        GPIO.output(LEFT_WHEEL_1_GPIO,GPIO.LOW) 
-        GPIO.output(LEFT_WHEEL_2_GPIO,GPIO.LOW) 
-
-        GPIO.output(RIGHT_WHEEL_1_GPIO,GPIO.HIGH)
-        GPIO.output(RIGHT_WHEEL_2_GPIO,GPIO.LOW)
+        GPIO.output(LEFT_WHEEL_1_GPIO,GPIO.HIGH) 
+        GPIO.output(LEFT_WHEEL_2_GPIO,GPIO.LOW)
 
 
 
@@ -378,15 +389,15 @@ def turn_right(direction_state):
 # RETURN:
 #   none
 # -----------------------------------------------------------------------------
-def forward_drive_direction(direction_state):
-    if(direction_state == FORWARD):
+def forward_drive_direction(g_direction_state):
+    if(g_direction_state == FORWARD):
         GPIO.output(LEFT_WHEEL_1_GPIO,GPIO.HIGH) 
         GPIO.output(LEFT_WHEEL_2_GPIO,GPIO.LOW) 
 
         GPIO.output(RIGHT_WHEEL_1_GPIO,GPIO.LOW)
         GPIO.output(RIGHT_WHEEL_2_GPIO,GPIO.HIGH)
     
-    elif(direction_state == BACKWARDS):
+    elif(g_direction_state == BACKWARDS):
         GPIO.output(LEFT_WHEEL_1_GPIO,GPIO.LOW) 
         GPIO.output(LEFT_WHEEL_2_GPIO,GPIO.HIGH) 
 
@@ -449,10 +460,10 @@ def create_gui(left_enable_pwm, right_enable_pwm):
     
     #Creates the main window's title
     if(g_autominous_mode):
-        gui_main_window.title("CPT-210: Final Project V2 (Automatous Mode)")
+        gui_main_window.title("CPT-210: Final Project V3 (Automatous Mode)")
     
     else:
-        gui_main_window.title("CPT-210: Final Project V2 (Manual Mode)")
+        gui_main_window.title("CPT-210: Final Project V3 (Manual Mode)")
     
     # Creates a frame that holds the instructions on how to use the GUI
     desc_frame = TK.Frame(gui_main_window)
@@ -549,9 +560,11 @@ def create_gui(left_enable_pwm, right_enable_pwm):
 #   
 # -----------------------------------------------------------------------------
 def update_car_pwm(car_speed):
-    conv_car_speed = (int)(car_speed)
-    gui_main_window.left_enable_pwm.ChangeDutyCycle(conv_car_speed)
-    gui_main_window.right_enable_pwm.ChangeDutyCycle(conv_car_speed)
+    global g_car_speed
+    
+    g_car_speed = (int)(car_speed)
+    gui_main_window.left_enable_pwm.ChangeDutyCycle(g_car_speed)
+    gui_main_window.right_enable_pwm.ChangeDutyCycle(g_car_speed)
 
 
 
@@ -693,6 +706,7 @@ def toggle_mode():
     gui_main_window.destroy()
 
 
+
 # -----------------------------------------------------------------------------
 # DESCRIPTION
 #   
@@ -709,6 +723,7 @@ def toggle_mode():
 def toggle_follow_path():
     global g_adaptive_path_driving
     
+    stop_auto_car_pwm()
     gui_main_window.destroy()
     g_adaptive_path_driving = not g_adaptive_path_driving    
     
@@ -730,6 +745,7 @@ def toggle_follow_path():
 def toggle_avoid_obstacles():
     global g_adaptive_obst_driving
     
+    stop_auto_car_pwm()
     gui_main_window.destroy()
     g_adaptive_obst_driving = not g_adaptive_obst_driving  
 
@@ -797,9 +813,11 @@ def mode_status(flag_var):
 # RETURN:
 #   none
 # -----------------------------------------------------------------------------
-def destroy(left_enable_pwm, right_enable_pwm):
+def destroy(left_enable_pwm, right_enable_pwm, path_detection, obst_detection):
     global gui_main_window
     
+    path_detection.join()
+    obst_detection.join()
     left_enable_pwm.stop()
     right_enable_pwm.stop()
     GPIO.cleanup()
