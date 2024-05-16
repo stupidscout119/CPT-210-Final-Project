@@ -111,7 +111,7 @@ def main ():
   left_enable_pwm.start(NO_DUTY_CYCLE)
   right_enable_pwm.start(NO_DUTY_CYCLE)
 
-  path_detection = threading.Thread(target=determine_turn, args=(left_enable_pwm, right_enable_pwm,))
+  path_detection = threading.Thread(target=determine_turn, args=())
   path_detection.start()
   obst_detection = threading.Thread(target=determine_direction, args=())
   obst_detection.start()
@@ -192,6 +192,7 @@ def determine_direction():
     
     while(not g_program_quit):
         if(g_autominous_mode):
+            g_direction_state = FORWARD
             if(g_adaptive_obst_driving):
                  g_direction_state = determine_distance(ECHO_GPIO)
 
