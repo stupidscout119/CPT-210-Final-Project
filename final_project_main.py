@@ -800,7 +800,8 @@ def mode_status(flag_var):
 
 # -----------------------------------------------------------------------------
 # DESCRIPTION
-#   Ensures that certain functions, specifically the GPIO pins, are turned off.
+#   Ensures that certain functions, specifically the threads, PWM objects, & 
+#   GPIO pins, are turned off.
 #
 # INPUT PARAMETERS:
 #   none
@@ -819,7 +820,6 @@ def destroy(left_enable_pwm, right_enable_pwm, path_detection, obst_detection):
     left_enable_pwm.stop()
     right_enable_pwm.stop()
     GPIO.cleanup()
-    # Other functions are shut down
 
 
 
