@@ -1,13 +1,20 @@
 # *****************************************************************************
 # ***************************  Python Source Code  ****************************
 # *****************************************************************************
-#
-#   DESIGNER NAME:  Dakota Maxwell & Isaac Cassady
-#
-#       FILE NAME:  final_project_main.py
-#
-# DESCRIPTION
-#   INSERT HERE
+#                                                                                  
+#   DESIGNER NAME:  Dakota Maxwell & Isaac Cassady                                 
+#                                                                                  
+#       FILE NAME:  final_project_main.py                                                    
+#                                                                                      
+# DESCRIPTION                                                                   
+#   The main goal of the project is to create an RC car with two main modes,      
+#   automatous and manual. In automatous mode, when a car is placed on a flat    
+#   path marked in black with various turns and obstacles, it will turn to stay
+#   on the paths and back away / stop in-front of obstacles until they are 
+#   removed. The speed of the car’s motors can be changed by a user via a GUI
+#   created by Python’s Tkinter module. In manual mode, the car’s individual 
+#   motor speeds and rotation directions are directly controlled by 
+#   the GUI.
 #
 # *****************************************************************************
 #*****************************************************************************
@@ -26,6 +33,8 @@ import threading
 # cm
 OBST_MIN_DIST           = 11.43
 OBST_MAX_DIST           = 20
+
+# Program specific constants
 FORWARD                 = 1
 BACKWARDS               = -1
 STOP                    = 0
@@ -37,12 +46,12 @@ RIGHT_WHEEL_1_GPIO      = 24
 RIGHT_WHEEL_2_GPIO      = 23
 LEFT_OBST_GPIO          = 6
 RIGHT_OBST_GPIO         = 5
-FULL_SPEED              = 100
 NO_SPEED                = 0
 MAN_MIN_SPEED           = -100
 AUTO_MIN_SPEED          = 0
 MAX_SPEED               = 100
 
+# Ultrasonic Constants
 TRIG_GPIO      = 26
 ECHO_GPIO      = 16
 MAX_DISTANCE   = 220
@@ -55,9 +64,6 @@ DIVIDE_BY_TIME = 10000.00
 
 # Constants for PWM functions
 NO_DUTY_CYCLE    = 0
-FULL_DUTY_CYCLE  = 100
-DUTY_CYCLE_DELAY = 0.01
-TURNAROUND_TIME  = 0.5
 PWM_FREQUENCY    = 1000
 
 # Constants for GUI Functions
@@ -72,23 +78,9 @@ READ_DELAY_10NS  = 0.00001
 READ_DELAY_50MS  = 0.05
 READ_DELAY_100MS = 0.1
 
-# Increments/decrement
-INCREMENT = 1
-DECREMENT = -1
-
-# sec
-MIN_PULSE_WIDTH = 0.0005
-MAX_PULSE_WIDTH = 0.0025
-
-SERVER_HOST = '0.0.0.0'
-SERVER_PORT = 80
-
-START_INDEX = 0
-
 #---------------------------------------------------------------------
 # Global variables to be used
 #---------------------------------------------------------------------
-# Debugging features flags
 g_autominous_mode       = False
 g_adaptive_obst_driving = False
 g_adaptive_path_driving = False
@@ -126,16 +118,17 @@ def main ():
 
 # -----------------------------------------------------------------------------
 # DESCRIPTION
-#   Sets up GPIO functionality for the program, speciffically for pins 
+#   Sets up GPIO functionality for the program, specifically for pins 5, 6, 16, 
+#   17, 22, 23, 24, 25, 26, & 27
 #
 # INPUT PARAMETERS:
-#   none
+#   N/A
 #
 # OUTPUT PARAMETERS:
-#   none
+#   N/A
 #
 # RETURN:
-#   none
+#   left_enable_pwm & right_enable_pwm- the PWM of both h-bridge enables
 # -----------------------------------------------------------------------------
 def setup_gpio():   
      # use BCM GPIO numbering scheme
@@ -175,16 +168,18 @@ def setup_gpio():
 
 # -----------------------------------------------------------------------------
 # DESCRIPTION
-#   
+#   This function, if called while autonomus mode is activated, will use the
+#   distance obtained by the ultrasonic sensor to determine which direction to
+#   go on the path
 #
 # INPUT PARAMETERS:
-#   
+#   N/A
 #
 # OUTPUT PARAMETERS:
-#   none
+#   N/A
 #
 # RETURN:
-#    
+#   N/A
 # -----------------------------------------------------------------------------
 def determine_direction():
     global g_program_quit
@@ -194,7 +189,7 @@ def determine_direction():
         if(g_autominous_mode):
             g_direction_state = FORWARD
             if(g_adaptive_obst_driving):
-                 g_direction_state = determine_distance(ECHO_GPIO)
+                 determine_distance()
 
             forward_drive_direction(g_direction_state)
             
@@ -204,7 +199,9 @@ def determine_direction():
 
 # -----------------------------------------------------------------------------
 # DESCRIPTION
-#   
+#   This function, if called while autonomus mode is activated, will use the
+#   values returned from the IR sensors to determine whether to turn and what
+#   direction to turn
 #
 # INPUT PARAMETERS:
 #   N/A
@@ -279,8 +276,6 @@ def send_trigger_pulse():
 #   distance - The distance between the sensor and a surface
 # -----------------------------------------------------------------------------
 def measure_return_echo(gpio_pin, logic_level, time_out):
-    
-    
     t0 = time.time()
     while(GPIO.input(gpio_pin) != logic_level):
         if((time.time() - t0) > time_out * DIVIDE_BY_TIME):
@@ -297,18 +292,21 @@ def measure_return_echo(gpio_pin, logic_level, time_out):
 
 # -----------------------------------------------------------------------------
 # DESCRIPTION
-#   
+#    This function will determine if an object is within stopping / backing up 
+#    range of the car.
 #
 # INPUT PARAMETERS:
-#   
+#    N/A
 #
 # OUTPUT PARAMETERS:
-#   none
+#    N/A
 #
 # RETURN:
-#    
+#    N/A
 # -----------------------------------------------------------------------------
-def determine_distance(gpio_pin):
+def determine_distance():
+    global g_direction_state
+  
     g_direction_state = FORWARD
 
     send_trigger_pulse()
@@ -320,13 +318,10 @@ def determine_distance(gpio_pin):
     if(distance < OBST_MAX_DIST and distance > OBST_MIN_DIST):
         g_direction_state = STOP
 
-    return g_direction_state
-
-
-
 # -----------------------------------------------------------------------------
 # DESCRIPTION
-#   
+#   This function configures the GPIO motor pins to turn the car to the left  
+#   regardless of direction
 #
 # INPUT PARAMETERS:
 #   none
@@ -352,7 +347,8 @@ def turn_left():
         
 # -----------------------------------------------------------------------------
 # DESCRIPTION
-#   
+#   This function configures the GPIO motor pins to turn the car to the right  
+#   regardless of direction
 #
 # INPUT PARAMETERS:
 #   none
@@ -378,10 +374,12 @@ def turn_right():
 
 # -----------------------------------------------------------------------------
 # DESCRIPTION
-#   
+#   This function configures the GPIO motor pins to go along the path in a 
+#   specified direction 
 #
 # INPUT PARAMETERS:
-#   none
+#   g_direction_state - Integer value that tells the program what direction the
+#                       car must go on the path.
 #
 # OUTPUT PARAMETERS:
 #   none
