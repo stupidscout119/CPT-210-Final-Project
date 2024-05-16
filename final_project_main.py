@@ -804,8 +804,8 @@ def mode_status(flag_var):
 #   GPIO pins, are turned off.
 #
 # INPUT PARAMETERS:
-#   none
-#
+#   left_enable_pwm & right_enable_pwm - The enable PWMs of the h-bridge
+#   path_detection & obst_detection - The threads of the program
 # OUTPUT PARAMETERS:
 #   none
 #
