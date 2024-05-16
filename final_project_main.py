@@ -192,7 +192,6 @@ def determine_direction():
     
     while(not g_program_quit):
         if(g_autominous_mode):
-            g_direction_state = FORWARD
             if(g_adaptive_obst_driving):
                  g_direction_state = determine_distance(ECHO_GPIO)
 
