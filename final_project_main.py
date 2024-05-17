@@ -183,13 +183,13 @@ def setup_gpio():
 # -----------------------------------------------------------------------------
 def determine_direction():
     global g_program_quit
-    global g_direction_state
     
     while(not g_program_quit):
         if(g_autominous_mode):
             g_direction_state = FORWARD
             if(g_adaptive_obst_driving):
-                 determine_distance()
+                g_direction_state = determine_distance(ECHO_GPIO)
+                print(g_direction_state)
 
             forward_drive_direction(g_direction_state)
             
@@ -304,9 +304,7 @@ def measure_return_echo(gpio_pin, logic_level, time_out):
 # RETURN:
 #    N/A
 # -----------------------------------------------------------------------------
-def determine_distance():
-    global g_direction_state
-  
+def determine_distance(gpio_pin):
     g_direction_state = FORWARD
 
     send_trigger_pulse()
@@ -317,6 +315,8 @@ def determine_distance():
 
     if(distance < OBST_MAX_DIST and distance > OBST_MIN_DIST):
         g_direction_state = STOP
+    
+    return g_direction_state
 
 # -----------------------------------------------------------------------------
 # DESCRIPTION
