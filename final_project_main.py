@@ -413,16 +413,18 @@ def forward_drive_direction(g_direction_state):
 
 # -----------------------------------------------------------------------------
 # DESCRIPTION
-#   
+#   This function reads the value of a specified IR sensor and determines if 
+#   the path takes a turn.
 #
 # INPUT PARAMETERS:
-#   none
+#   gpio_pin    - The GPIO pin of a specified IR sensor.
+#   logic_level - The IR value that indicates that a path turn is detected.
 #
 # OUTPUT PARAMETERS:
-#   none
+#   N/A
 #
 # RETURN:
-#   none
+#   turn_status - A flag that indicates that a turn has been detected.
 # -----------------------------------------------------------------------------
 def determine_turn_direction(gpio_pin, logic_level):
    turn_status = False
@@ -436,16 +438,19 @@ def determine_turn_direction(gpio_pin, logic_level):
 
 # -----------------------------------------------------------------------------
 # DESCRIPTION
-#   
+#   Depending on the selected modes, this program will create and display a GUI
+#   for the car. The GUI will have in-depth inmstructions on how to operate the 
+#   car.
 #
 # INPUT PARAMETERS:
-#   
+#   left_enable_pwm & right_enable_pwm- the PWM of both h-bridge enables
 #
 # OUTPUT PARAMETERS:
-#   
+#   A GUI with in-depth operational instructions that adapts to the selected 
+#   modes
 #
 # RETURN:
-#   
+#   N/A
 # -----------------------------------------------------------------------------
 def create_gui(left_enable_pwm, right_enable_pwm):
     global gui_main_window
@@ -546,16 +551,17 @@ def create_gui(left_enable_pwm, right_enable_pwm):
 
 # -----------------------------------------------------------------------------
 # DESCRIPTION
-#   
+#   This function simultaniously updates the enable PWMs to change the speed of
+#   the car while maintaining a forward motion
 #
 # INPUT PARAMETERS:
-#   
+#   car_speed - The string of the updated motor speeds from the GUI
 #
 # OUTPUT PARAMETERS:
-#   
+#   N/A
 #
 # RETURN:
-#   
+#   N/A
 # -----------------------------------------------------------------------------
 def update_car_pwm(car_speed):
     global g_car_speed
@@ -568,16 +574,16 @@ def update_car_pwm(car_speed):
 
 # -----------------------------------------------------------------------------
 # DESCRIPTION
-#   
+#   This function exclusively updates the enable PWM of the left motor.
 #
 # INPUT PARAMETERS:
-#   
+#   left_motor_speed - The string of the updated left motor speed from the GUI
 #
 # OUTPUT PARAMETERS:
-#   
+#   N/A
 #
 # RETURN:
-#   
+#   N/A 
 # -----------------------------------------------------------------------------
 def update_left_enable_pwm(left_motor_speed):
     conv_left_motor_speed = int(left_motor_speed)
@@ -600,16 +606,16 @@ def update_left_enable_pwm(left_motor_speed):
 
 # -----------------------------------------------------------------------------
 # DESCRIPTION
-#   
+#   This function exclusively updates the enable PWM of the right motor.
 #
 # INPUT PARAMETERS:
-#   
+#   right_motor_speed - The string of the updated left motor speed from the GUI
 #
 # OUTPUT PARAMETERS:
-#   
+#   N/A
 #
 # RETURN:
-#   
+#   N/A
 # -----------------------------------------------------------------------------
 def update_right_enable_pwm(right_motor_speed):
     conv_right_motor_speed = int(right_motor_speed)
@@ -632,16 +638,17 @@ def update_right_enable_pwm(right_motor_speed):
 
 # -----------------------------------------------------------------------------
 # DESCRIPTION
-#   
+#   This functions simultaniously sets both the enable PWMs to zero while the 
+#   car is in autonomous mode.
 #
 # INPUT PARAMETERS:
-#   
+#   N/A
 #
 # OUTPUT PARAMETERS:
-#   
+#   N/A
 #
 # RETURN:
-#   
+#   N/A
 # -----------------------------------------------------------------------------
 def stop_auto_car_pwm():
     gui_main_window.left_enable_pwm.ChangeDutyCycle(NO_SPEED)
@@ -651,16 +658,18 @@ def stop_auto_car_pwm():
 
 # -----------------------------------------------------------------------------
 # DESCRIPTION
-#   
+#   This functions simultaniously sets both the enable PWMs to zero and turn 
+#   off both h-bride output GPIO pins of both motors while the car is in manual 
+#   mode.
 #
 # INPUT PARAMETERS:
-#   
+#   N/A
 #
 # OUTPUT PARAMETERS:
-#   
+#   N/A
 #
 # RETURN:
-#   
+#   N/A
 # -----------------------------------------------------------------------------
 def stop_man_car_pwm():
     GPIO.output(LEFT_WHEEL_1_GPIO,GPIO.LOW) 
@@ -676,16 +685,17 @@ def stop_man_car_pwm():
     
 # -----------------------------------------------------------------------------
 # DESCRIPTION
-#   
+#   This function will allow the user to change between the main modes and 
+#   update the GUI.
 #
 # INPUT PARAMETERS:
-#   
+#   N/A
 #
 # OUTPUT PARAMETERS:
-#   
+#   N/A
 #
 # RETURN:
-#   
+#   N/A
 # -----------------------------------------------------------------------------
 def toggle_mode():
     global g_autominous_mode
@@ -707,16 +717,17 @@ def toggle_mode():
 
 # -----------------------------------------------------------------------------
 # DESCRIPTION
-#   
+#   This function toggles a submode where the car follows along a 2D path. The
+#   GUI will be updated after this.
 #
 # INPUT PARAMETERS:
-#   
+#   N/A
 #
 # OUTPUT PARAMETERS:
-#   
+#   N/A
 #
 # RETURN:
-#   
+#   N/A
 # -----------------------------------------------------------------------------
 def toggle_follow_path():
     global g_adaptive_path_driving
@@ -729,16 +740,17 @@ def toggle_follow_path():
     
 # -----------------------------------------------------------------------------
 # DESCRIPTION
-#   
+#   This function toggles a submode where the car will back up / stop in front 
+#   of obstacles. The GUI will be updated after this.
 #
 # INPUT PARAMETERS:
-#   
+#   N/A
 #
 # OUTPUT PARAMETERS:
-#   
+#   N/A
 #
 # RETURN:
-#   
+#   N/A
 # -----------------------------------------------------------------------------
 def toggle_avoid_obstacles():
     global g_adaptive_obst_driving
@@ -751,16 +763,16 @@ def toggle_avoid_obstacles():
 
 # -----------------------------------------------------------------------------
 # DESCRIPTION
-#   
+#   This function will allow the program to stop in a safe manner.
 #
 # INPUT PARAMETERS:
-#   
+#   N/A
 #
 # OUTPUT PARAMETERS:
-#   
+#   N/A
 #
 # RETURN:
-#   
+#   N/A
 # -----------------------------------------------------------------------------
 def quit_program():
     global g_program_quit
@@ -774,16 +786,17 @@ def quit_program():
 
 # -----------------------------------------------------------------------------
 # DESCRIPTION
-#   
+#   This function will read in the state of the boolean that has been passed as
+#   an argument. A string that reflects that state is returned
 #
 # INPUT PARAMETERS:
-#   none
+#   flag_var - A boolean with an initialized state.
 #
 # OUTPUT PARAMETERS:
-#   none
+#   N/A
 #
 # RETURN:
-#   none
+#   flag_string - A string that reflects the state of the flag_var.
 # -----------------------------------------------------------------------------
 def mode_status(flag_var):
    flag_string = "ON"
@@ -804,8 +817,8 @@ def mode_status(flag_var):
 #   GPIO pins, are turned off.
 #
 # INPUT PARAMETERS:
-#   left_enable_pwm & right_enable_pwm - The enable PWMs of the h-bridge
-#   path_detection & obst_detection - The threads of the program
+#   left_enable_pwm & right_enable_pwm - The enable PWMs of the h-bridge.
+#   path_detection & obst_detection - The threads of the program.
 # OUTPUT PARAMETERS:
 #   none
 #
